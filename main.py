@@ -7,7 +7,7 @@ import creds
 
 username = creds.username
 password = creds.password
-dbName = "YOUR_DB_NAME"
+dbName = "p320_36"
 
 
 try:
