@@ -6,6 +6,9 @@ Before the running of this program ensure that you have these packages installed
 
 Before running this program ensure that you have a python file called creds.py
     - Contains cs dept username and password
+        - username = 'Your username'
+        - password = 'Your passowrd'
+
 
 
 

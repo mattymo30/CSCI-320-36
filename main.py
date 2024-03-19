@@ -3,9 +3,10 @@
 
 import psycopg2
 from sshtunnel import SSHTunnelForwarder
+import creds
 
-username = "YOUR_CS_USERNAME"
-password = "YOUR_CS_PASSWORD"
+username = creds.username
+password = creds.password
 dbName = "YOUR_DB_NAME"
 
 
