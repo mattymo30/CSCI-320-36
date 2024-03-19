@@ -1,6 +1,6 @@
 import psycopg2
 from sshtunnel import SSHTunnelForwarder
-from credentials import USERNAME, PASSWORD, DB_NAME
+from creds import USERNAME, PASSWORD, DB_NAME
 
 try:
     with SSHTunnelForwarder(('starbug.cs.rit.edu', 22),
