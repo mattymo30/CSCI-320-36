@@ -46,3 +46,23 @@ def search_users(curs:cursor, email:str):
 
 def unfollow(curs:cursor, user_email:str):
     pass
+
+def createAccount(curs):
+    # record time and date of account creation
+    print ("Function to create a account")
+
+def login(curs):
+    print ("Function to login")
+
+def listCollections(curs):
+    print ("Function to print a users collection")
+
+def searchMovie(curs):
+    # Need the user to select by what parameter they are going to be searching by
+    # Take in user input for that parameter and then write queries and return as such
+    print ("Function to search for movies")
+
+
+def getFriends(curs):
+    # Write the querty to get and print friends
+    print ("Function to get friends")
