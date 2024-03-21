@@ -3,9 +3,7 @@
 
 import psycopg2
 from sshtunnel import SSHTunnelForwarder
-# from connect import curs
 from psycopg2.extensions import cursor
-
 
 def main_loop(cursor):
     while 1:
