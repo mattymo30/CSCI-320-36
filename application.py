@@ -20,31 +20,40 @@ def add_movie(curs:cursor):
     pass
 
 # Deletes movie from collection
-def delete_movie(curs:cursor, name:str):
+def delete_movie(curs:cursor):
+    # Ask for name
     pass
 
-def update_col_name(curs:cursor, old_name:str, new_name:str):
+def update_col_name(curs:cursor):
+    # Ask for old name and and new name
     pass
 
-def delete_collection(curse:cursor, name:str):
+def delete_collection(curse:cursor):
+    # ask for name
     pass
 
-def rate_movie(curs:cursor, rating:int):
+def rate_movie(curs:cursor):
+    # ask for rating out of 5
     pass
 
-def watch_movie(curs:cursor, name:str):
+def watch_movie(curs:cursor):
+    # ask for name
     pass
 
-def watch_collection(curs:cursor, name:str):
+def watch_collection(curs:cursor):
+    # ask for name
     pass
 
-def follow(curs:cursor, user_email:str):
+def follow(curs:cursor):
+    # ask for user email to follow
     pass
 
-def search_users(curs:cursor, email:str):
+def search_users(curs:cursor):
+    # Ask for user email
     pass
 
-def unfollow(curs:cursor, user_email:str):
+def unfollow(curs:cursor):
+    # ask for user email
     pass
 
 def createAccount(curs):
