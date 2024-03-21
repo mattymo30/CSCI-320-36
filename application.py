@@ -66,6 +66,9 @@ def login(curs):
 def listCollections(curs):
     print ("Function to print a users collection")
 
+def createCollections(curs):
+    print ("Function to create collection")
+
 def searchMovie(curs):
     # Need the user to select by what parameter they are going to be searching by
     # Take in user input for that parameter and then write queries and return as such
