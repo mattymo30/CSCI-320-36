@@ -60,6 +60,10 @@ def listCollections(curs):
 def createCollections(curs):
     print ("Function to create collection")
 
+
+def manageCollection(curs):
+    print ("A function to manage collections")
+
 def searchMovie(curs):
     # Need the user to select by what parameter they are going to be searching by
     # Take in user input for that parameter and then write queries and return as such
