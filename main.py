@@ -21,6 +21,7 @@ try:
 
         conn = psycopg2.connect(**params)
         curs = conn.cursor()
+        print(type(curs))
         print("Database connection established")
 
         # DB work here
