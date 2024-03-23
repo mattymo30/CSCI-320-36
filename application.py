@@ -1,10 +1,12 @@
 # This is the main application file.
 # Pushing out to github to have a starting point
+import time
 
 import psycopg2
 from sshtunnel import SSHTunnelForwarder
 import bcrypt # bcrypt hash used with mockaroo passwords
 from psycopg2.extensions import cursor
+from datetime import date
 
 
 def main_loop(cursor):
@@ -70,11 +72,15 @@ def unfollow(curs: cursor):
 
 
 def createAccount(cursor):
+    """
+    Register a user to the database
+    :param cursor: cursor to connect to the database and tables
+    """
     username = input("Type the new account's username: ")
     # check if username already exists
     cursor.execute("SELECT count(*) FROM person WHERE username = ?", (username,))
     results = cursor.fetchall()
-    if results > 0:
+    if results[0] > 0:
         print("username already exists!")
     else:
         password = input("Type in the new account's password: ")
@@ -85,10 +91,22 @@ def createAccount(cursor):
         fname = input("Enter your first name: ")
         lname = input("Enter your last name: ")
         dob = input("Enter your date of birth (YYYY-MM-DD): ")
+        # TODO check if user inputted date in correct format?
+        # record time and date of account creation
+        creation_date = date.today()
+        last_access = date.today()
+        # TODO how are we storing time of last access or is this unused?
+        time_created = time.localtime()
 
+        cursor.execute(
+            "INSERT INTO person (username, password, email, fname, lname, dob, "
+            "creation_date, last_access) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (username, password, email, fname, lname,
+             dob, creation_date, last_access)
+        )
 
-    # record time and date of account creation
-    print("Function to create a account")
+        print("Account has been created!")
 
 
 def login(curs):
