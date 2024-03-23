@@ -11,9 +11,16 @@ from datetime import date
 
 def main_loop(cursor):
     while 1:
-        user_input = input("Press q to quit")
+        user_input = input("Welcome to the movies database!\n"
+                           "r: register new user\n"
+                           "l: login to database\n"
+                           "q: exit program\n")
         if user_input == 'q':
             break
+        elif user_input == 'l':
+            login(cursor)
+        elif user_input == 'r':
+            createAccount(cursor)
         else:
             cursor.execute("SELECT * FROM genre")
             results = cursor.fetchall()
@@ -109,9 +116,31 @@ def createAccount(cursor):
         print("Account has been created!")
 
 
-def login(curs):
-    # use bcrypt.checkpw to check passwords?
-    print("Function to login")
+def login(cursor):
+    """
+    Attempt to log in a user to the database
+    :param cursor: cursor to connect to the database and tables
+    """
+
+    username = input("Enter your username: ")
+    password = input("Enter your password: ")
+
+    # try to fetch the username in the person table
+    cursor.execute("SELECT password FROM person WHERE username = ?",
+                   (username,))
+    result = cursor.fetchone()
+    # if the username did exist
+    if result:
+        # now check the password
+        hashed_p = result[0]
+        if bcrypt.checkpw(password.encode('utf-8'), hashed_p):
+            print("Login successful")
+            # TODO should the function return the user id?
+        else:
+            print("Incorrect password. Please try again.")
+
+    else:
+        print("Username not found. Please try again.")
 
 
 def listCollections(curs):
