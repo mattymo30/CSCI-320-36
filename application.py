@@ -14,6 +14,7 @@ def main_loop(cursor):
         user_input = input("Welcome to the movies database!\n"
                            "r: register new user\n"
                            "l: login to database\n"
+                           "s: search movies\n"
                            "q: exit program\n")
         if user_input == 'q':
             break
@@ -21,6 +22,8 @@ def main_loop(cursor):
             login(cursor)
         elif user_input == 'r':
             createAccount(cursor)
+        elif user_input == 's':
+            searchMovie(cursor)
         else:
             cursor.execute("SELECT * FROM genre")
             results = cursor.fetchall()
@@ -158,7 +161,65 @@ def manageCollection(curs):
 def searchMovie(curs):
     # Need the user to select by what parameter they are going to be searching by
     # Take in user input for that parameter and then write queries and return as such
-    print("Function to search for movies")
+    # Get search parameters from the user
+    search_option = input("Search movies by (name/release date/cast members/studio/genre): ").lower()
+    search_query = input("Enter your search query: ")
+
+    # Construct the SQL query based on user input
+    sql_query = """
+                SELECT m.title, m.cast_members, m.director, m.length, m.mpaa, r.release_date
+                FROM movie m
+                LEFT JOIN released r ON m.movieid = r.movieid
+                LEFT JOIN produces p ON m.movieid = p.movieid
+                LEFT JOIN categorize c ON m.movieid = c.movieid
+                WHERE """
+    
+    #search by name
+    if search_option == "name":
+        sql_query += f"LOWER(m.title) LIKE LOWER('%{search_query}%')"
+    #search by release date
+    elif search_option == "release date":
+        sql_query += f"r.release_date = '{search_query}'"
+    #search by cast members
+    elif search_option == "cast members":
+        sql_query += f"LOWER(m.cast_members) LIKE LOWER('%{search_query}%')"
+    #search by studio
+    elif search_option == "studio":
+        sql_query += f"LOWER(p.contributorid) LIKE LOWER('%{search_query}%')"
+    #search by genre
+    elif search_option == "genre":
+        sql_query += f"c.genreid = (SELECT genreid FROM genre WHERE LOWER(genre_name) = LOWER('{search_query}'))"
+    else:
+        print("Invalid search option.")
+        return
+
+    # Sorting the result
+    sort_option = input("Sort results by (name/release date): ").lower()
+    if sort_option == "name":
+        sql_query += " ORDER BY m.title ASC"
+    elif sort_option == "release date":
+        sql_query += " ORDER BY r.release_date ASC"
+    else:
+        print("Invalid sort option.")
+        return
+
+    # Execute the constructed query
+    cursor.execute(sql_query)
+    results = cursor.fetchall()
+
+    # Print the results
+    if results:
+        print("Search Results:")
+        for result in results:
+            print("Title:", result[0])
+            print("Cast Members:", result[1])
+            print("Director:", result[2])
+            print("Length:", result[3])
+            print("MPAA Rating:", result[4])
+            print("Release Date:", result[5])
+            print()
+    else:
+        print("No matching movies found.")
 
 
 def getFriends(curs):

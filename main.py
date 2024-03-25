@@ -15,7 +15,7 @@ try:
             'user': USERNAME,
             'password': PASSWORD,
             'host': 'localhost',
-            'port': server.local_bind_port
+            'port': server.local_bind_portr
         }
 
 
