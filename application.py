@@ -78,42 +78,45 @@ def unfollow(curs: cursor):
     pass
 
 
-def createAccount(cursor):
+def createAccount(cursor:cursor):
     """
     Register a user to the database
     :param cursor: cursor to connect to the database and tables
     """
-    username = input("Type the new account's username: ")
     # check if username already exists
-    cursor.execute("SELECT count(*) FROM person WHERE username = ?", (username,))
+    # mfindon0 is expected to have 1
+    username = input("Type the new account's username: ")
+    command = f"SELECT count(*) FROM person WHERE username = '{username}';"
+    cursor.execute(command)
     results = cursor.fetchall()
-    if results[0] > 0:
+
+    if results[0][0] > 0:
         print("username already exists!")
-    else:
-        password = input("Type in the new account's password: ")
-        bytes = password.encode('utf-8')
-        salt = bcrypt.gensalt()
-        password = bcrypt.hashpw(bytes, salt)
-        email = input("Enter your email address: ")
-        fname = input("Enter your first name: ")
-        lname = input("Enter your last name: ")
-        dob = input("Enter your date of birth (YYYY-MM-DD): ")
-        # TODO check if user inputted date in correct format?
-        # record time and date of account creation
-        creation_date = date.today()
-        last_access = date.today()
-        # TODO how are we storing time of last access or is this unused?
-        time_created = time.localtime()
+    # else:
+    #     password = input("Type in the new account's password: ")
+    #     bytes = password.encode('utf-8')
+    #     salt = bcrypt.gensalt()
+    #     password = bcrypt.hashpw(bytes, salt)
+    #     email = input("Enter your email address: ")
+    #     fname = input("Enter your first name: ")
+    #     lname = input("Enter your last name: ")
+    #     dob = input("Enter your date of birth (YYYY-MM-DD): ")
+    #     # TODO check if user inputted date in correct format?
+    #     # record time and date of account creation
+    #     creation_date = date.today()
+    #     last_access = date.today()
+    #     # TODO how are we storing time of last access or is this unused?
+    #     time_created = time.localtime()
 
-        cursor.execute(
-            "INSERT INTO person (username, password, email, fname, lname, dob, "
-            "creation_date, last_access) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (username, password, email, fname, lname,
-             dob, creation_date, last_access)
-        )
+    #     cursor.execute(
+    #         "INSERT INTO person (username, password, email, fname, lname, dob, "
+    #         "creation_date, last_access) "
+    #         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    #         (username, password, email, fname, lname,
+    #          dob, creation_date, last_access)
+    #     )
 
-        print("Account has been created!")
+    #     print("Account has been created!")
 
 
 def login(cursor):
