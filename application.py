@@ -1,15 +1,12 @@
 # This is the main application file.
 # Pushing out to github to have a starting point
-import time
-
-import psycopg2
 from sshtunnel import SSHTunnelForwarder
 import bcrypt # bcrypt hash used with mockaroo passwords
 from psycopg2.extensions import cursor
 from datetime import date
 
 
-def main_loop(cursor):
+def main_loop(cursor, conn):
     while 1:
         user_input = input("Welcome to the movies database!\n"
                            "r: register new user\n"
@@ -20,7 +17,7 @@ def main_loop(cursor):
         elif user_input == 'l':
             login(cursor)
         elif user_input == 'r':
-            createAccount(cursor)
+            createAccount(cursor, conn)
         else:
             cursor.execute("SELECT * FROM genre")
             results = cursor.fetchall()
@@ -78,7 +75,7 @@ def unfollow(curs: cursor):
     pass
 
 
-def createAccount(cursor:cursor):
+def createAccount(cursor:cursor, conn):
     """
     Register a user to the database
     :param cursor: cursor to connect to the database and tables
@@ -86,37 +83,52 @@ def createAccount(cursor:cursor):
     # check if username already exists
     # mfindon0 is expected to have 1
     username = input("Type the new account's username: ")
-    command = f"SELECT count(*) FROM person WHERE username = '{username}';"
-    cursor.execute(command)
+    cursor.execute("SELECT count(*) FROM person WHERE username = (%s);",(username,))
     results = cursor.fetchall()
 
     if results[0][0] > 0:
         print("username already exists!")
-    # else:
-    #     password = input("Type in the new account's password: ")
-    #     bytes = password.encode('utf-8')
-    #     salt = bcrypt.gensalt()
-    #     password = bcrypt.hashpw(bytes, salt)
-    #     email = input("Enter your email address: ")
-    #     fname = input("Enter your first name: ")
-    #     lname = input("Enter your last name: ")
-    #     dob = input("Enter your date of birth (YYYY-MM-DD): ")
-    #     # TODO check if user inputted date in correct format?
-    #     # record time and date of account creation
-    #     creation_date = date.today()
-    #     last_access = date.today()
-    #     # TODO how are we storing time of last access or is this unused?
-    #     time_created = time.localtime()
+    else:
+        # password hashing
+        password = input("Type in the new account's password: ")
+        bytes = password.encode('utf-8')
+        salt = bcrypt.gensalt()
+        password = bcrypt.hashpw(bytes, salt)
+        password = password.decode() # Changes from byte string to regular string
+        
+        # Other info
+        email = input("Enter your email address: ")
+        fname = input("Enter your first name: ")
+        lname = input("Enter your last name: ")
+        # TODO check if user inputted date in correct format?
+        dob = input("Enter your date of birth (YYYY-MM-DD): ") 
+        
+        # record time and date of account creation
+        creation_date = date.today()
 
-    #     cursor.execute(
-    #         "INSERT INTO person (username, password, email, fname, lname, dob, "
-    #         "creation_date, last_access) "
-    #         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    #         (username, password, email, fname, lname,
-    #          dob, creation_date, last_access)
-    #     )
+        # Gets total users for primary key
+        # Works because users can't be deleted
+        cursor.execute("SELECT count(*) FROM person")
+        total_users = cursor.fetchall()[0][0]
+        
+        cursor.execute("""
+            INSERT INTO person (userid, username, password, email, fname, lname, dob, creation_date, last_access)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NULL)
+            """, 
+            (
+                int(total_users+1),
+                username,
+                password,
+                email,
+                fname,
+                lname,
+                dob,
+                creation_date
+            )
+        )
+        conn.commit()
 
-    #     print("Account has been created!")
+        print("Account has been created!")
 
 
 def login(cursor):

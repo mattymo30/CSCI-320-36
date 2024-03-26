@@ -2,6 +2,7 @@ import psycopg2
 from sshtunnel import SSHTunnelForwarder
 from creds import USERNAME, PASSWORD, DB_NAME
 from application import main_loop
+from psycopg2 import DatabaseError
 
 try:
     with SSHTunnelForwarder(('starbug.cs.rit.edu', 22),
@@ -25,10 +26,10 @@ try:
         print("Database connection established")
 
         # DB work here
-        main_loop(curs)
-        # print (curs)
-        # print(curs.execute("SELECT * FROM genre"))
-
+        try: # Catches DB errors
+            main_loop(curs, conn)
+        except(Exception, DatabaseError) as error:
+            print(error)
 
         conn.close()
 except:
