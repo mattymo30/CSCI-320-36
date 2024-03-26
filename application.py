@@ -4,6 +4,12 @@ from sshtunnel import SSHTunnelForwarder
 import bcrypt # bcrypt hash used with mockaroo passwords
 from psycopg2.extensions import cursor
 from datetime import date
+import sys
+from os import system
+
+
+CURR_USER = None;
+
 
 def main_loop(cursor, conn):
     while 1:
@@ -14,8 +20,10 @@ def main_loop(cursor, conn):
         if user_input == 'q':
             break
         elif user_input == 'l':
+            system('clear')
             login(cursor)
         elif user_input == 'r':
+            system('clear')
             createAccount(cursor, conn)
         else:
             cursor.execute("SELECT * FROM genre")
@@ -136,6 +144,10 @@ def createAccount(cursor:cursor, conn):
 
 
 def login(cursor:cursor):
+
+
+    global CURR_USER
+
     """
     Attempt to log in a user to the database
     :param cursor: cursor to connect to the database and tables
@@ -144,6 +156,10 @@ def login(cursor:cursor):
     # if CUR_USER != "":
     #     print(f"You are already logged into an account: {CUR_USER}")
     #     return
+
+    if CURR_USER != None:
+        print(f"You are already logged into an account: {CURR_USER}")
+        return
 
     # User enters credentials
     username = input("Enter your username: ")
@@ -162,7 +178,7 @@ def login(cursor:cursor):
     if bcrypt.checkpw(entered_pass, actual_pass):
         print("Login successful")
         # TODO Find a way to hold CUR_USER
-        # CUR_USER = username
+        CURR_USER = username
     else:
         print("Incorrect password. Please try again.")
 
