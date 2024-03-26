@@ -5,7 +5,6 @@ import bcrypt # bcrypt hash used with mockaroo passwords
 from psycopg2.extensions import cursor
 from datetime import date
 
-
 def main_loop(cursor, conn):
     while 1:
         user_input = input("Welcome to the movies database!\n"
@@ -74,6 +73,14 @@ def unfollow(curs: cursor):
     # ask for user email
     pass
 
+# Helper function for login/signup
+# Returns a hashed password
+def hash_pass(password:str):
+    bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    password = bcrypt.hashpw(bytes, salt)
+    password = password.decode() # Changes from byte string to regular string
+    return password
 
 def createAccount(cursor:cursor, conn):
     """
@@ -88,74 +95,76 @@ def createAccount(cursor:cursor, conn):
 
     if results[0][0] > 0:
         print("username already exists!")
-    else:
-        # password hashing
-        password = input("Type in the new account's password: ")
-        bytes = password.encode('utf-8')
-        salt = bcrypt.gensalt()
-        password = bcrypt.hashpw(bytes, salt)
-        password = password.decode() # Changes from byte string to regular string
-        
-        # Other info
-        email = input("Enter your email address: ")
-        fname = input("Enter your first name: ")
-        lname = input("Enter your last name: ")
-        # TODO check if user inputted date in correct format?
-        dob = input("Enter your date of birth (YYYY-MM-DD): ") 
-        
-        # record time and date of account creation
-        creation_date = date.today()
+        return 
+    
+    # password hashing
+    password = hash_pass(input("Type in the new account's password: "))
+    
+    # Other info
+    email = input("Enter your email address: ")
+    fname = input("Enter your first name: ")
+    lname = input("Enter your last name: ")
+    # TODO check if user inputted date in correct format?
+    dob = input("Enter your date of birth (YYYY-MM-DD): ") 
+    
+    # record time and date of account creation
+    creation_date = date.today()
 
-        # Gets total users for primary key
-        # Works because users can't be deleted
-        cursor.execute("SELECT count(*) FROM person")
-        total_users = cursor.fetchall()[0][0]
-        
-        cursor.execute("""
-            INSERT INTO person (userid, username, password, email, fname, lname, dob, creation_date, last_access)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NULL)
-            """, 
-            (
-                int(total_users+1),
-                username,
-                password,
-                email,
-                fname,
-                lname,
-                dob,
-                creation_date
-            )
+    # Gets total users for primary key
+    # Works because users can't be deleted
+    cursor.execute("SELECT count(*) FROM person")
+    total_users = cursor.fetchall()[0][0]
+    
+    cursor.execute("""
+        INSERT INTO person (userid, username, password, email, fname, lname, dob, creation_date, last_access)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NULL)
+        """, 
+        (
+            int(total_users+1),
+            username,
+            password,
+            email,
+            fname,
+            lname,
+            dob,
+            creation_date
         )
-        conn.commit()
+    )
+    conn.commit()
 
-        print("Account has been created!")
+    print("Account has been created!")
 
 
-def login(cursor):
+def login(cursor:cursor):
     """
     Attempt to log in a user to the database
     :param cursor: cursor to connect to the database and tables
     """
+    # TODO Find a way to hold CUR_USER
+    # if CUR_USER != "":
+    #     print(f"You are already logged into an account: {CUR_USER}")
+    #     return
 
+    # User enters credentials
     username = input("Enter your username: ")
-    password = input("Enter your password: ")
+    entered_pass = input("Enter your password: ").encode('utf-8')
 
-    # try to fetch the username in the person table
-    cursor.execute("SELECT password FROM person WHERE username = ?",
-                   (username,))
+    # Gets password from DB
+    cursor.execute("SELECT password FROM person WHERE username = %s",(username,))
     result = cursor.fetchone()
-    # if the username did exist
-    if result:
-        # now check the password
-        hashed_p = result[0]
-        if bcrypt.checkpw(password.encode('utf-8'), hashed_p):
-            print("Login successful")
-            # TODO should the function return the user id?
-        else:
-            print("Incorrect password. Please try again.")
 
-    else:
+    # if the username did exist
+    if not result:
         print("Username not found. Please try again.")
+        return
+    
+    actual_pass = result[0].encode('utf-8')
+    if bcrypt.checkpw(entered_pass, actual_pass):
+        print("Login successful")
+        # TODO Find a way to hold CUR_USER
+        # CUR_USER = username
+    else:
+        print("Incorrect password. Please try again.")
 
 
 def listCollections(curs):
