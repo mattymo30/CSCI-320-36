@@ -23,7 +23,7 @@ def main_loop(cursor, conn):
                            "l: login to database\n"
                            "c: to go to collections\n"
                            "q: exit program\n"
-                           "c: create collection test\n"
+                           "cc: create collection\n"
                            "s: search movies\n"
                            "q: exit program\n")
         if user_input == 'q':
@@ -37,9 +37,10 @@ def main_loop(cursor, conn):
         elif user_input == 'c':
             system('clear')
             manageCollection(cursor, conn)
-            createCollections(cursor, conn)
         elif user_input == 's':
             searchMovie(cursor)
+        elif user_input == 'cc':
+            createCollections(cursor, conn)
         else:
             cursor.execute("SELECT * FROM genre")
             results = cursor.fetchall()
@@ -236,6 +237,15 @@ def editCollection(collectionID: int, curs: cursor, conn):
         elif selection == 'D':
             movieToDelete = input ("Type the id of the movie you want to delete")
             curs.execute("DELETE FROM CONTAINS WHERE movieID = %s AND collectionID= %s", (movieToDelete, collectionID, ))
+            conn.commit()
+        elif selection == 'A':
+            movieToAdd = input ("Type the name of the movie you want to add")
+            curs.execute("SELECT movieID, title FROM MOVIE WHERE LOWER(title) LIKE LOWER(%s)", (movieToAdd, ))
+            results = curs.fetchall()
+            print(tabulate(results, headers=['Movie Id', 'Movie Title']))
+            movieIdToAdd = input ("Type the id of the movie you want to add")
+            curs.execute("INSERT INTO CONTAINS (collectionID, movieID) VALUES (%s, %s)", ((collectionID, movieIdToAdd)))
+            # TO DO: Actuall add it to the contains table
             conn.commit()
     
 
