@@ -6,9 +6,11 @@ from psycopg2.extensions import cursor
 from datetime import date
 import sys
 from os import system
+from tabulate import tabulate
 
 
-CURR_USER = None;
+CURR_USER = None
+CURR_USER_ID = None
 
 
 def main_loop(cursor, conn):
@@ -16,6 +18,7 @@ def main_loop(cursor, conn):
         user_input = input("Welcome to the movies database!\n"
                            "r: register new user\n"
                            "l: login to database\n"
+                           "c: to go to collections\n"
                            "q: exit program\n")
         if user_input == 'q':
             break
@@ -25,6 +28,9 @@ def main_loop(cursor, conn):
         elif user_input == 'r':
             system('clear')
             createAccount(cursor, conn)
+        elif user_input == 'c':
+            system('clear')
+            manageCollection(cursor, conn)
         else:
             cursor.execute("SELECT * FROM genre")
             results = cursor.fetchall()
@@ -147,6 +153,7 @@ def login(cursor:cursor):
 
 
     global CURR_USER
+    global CURR_USER_ID
 
     """
     Attempt to log in a user to the database
@@ -179,20 +186,72 @@ def login(cursor:cursor):
         print("Login successful")
         # TODO Find a way to hold CUR_USER
         CURR_USER = username
+        cursor.execute("SELECT userID FROM person WHERE username = %s", (CURR_USER,))
+        # CURR_USER_ID = cursor.fetchone()[0]
+        CURR_USER_ID = 2152
+        # print(CURR_USER_ID)
+
     else:
         print("Incorrect password. Please try again.")
 
-
-def listCollections(curs):
-    print("Function to print a users collection")
 
 
 def createCollections(curs):
     print("Function to create collection")
 
+def display_menu(menu):
+    for k, function in menu.items():
+        print(str(k) + ": Collection Name " + str(function[1]) + " | Number of Movies in Collection " + str(function[2]) + " | Total Run time in Minutes:seconds " + str(function[3]))
 
-def manageCollection(curs):
-    print("A function to manage collections")
+
+def editCollection(collectionID: int, curs: cursor, conn):
+    while True:
+        system('clear')
+        curs.execute("SELECT m.movieID, m.title, m.mpaa, m.length FROM CONTAINS c JOIN MOVIE m ON c.movieID = m.movieID WHERE c.collectionID = %s;", (collectionID, ))
+        results = curs.fetchall()
+        # printing out all the movies in the collection
+        print(tabulate(results, headers=['Movie id', 'Movie Name', 'Movie Rating', 'Movie Runtime in seconds']))
+        print(collectionID)
+        selection = input('Type DW to Delete whole collection, Type CN to change collection name, Type D to delete a movie from collection, Type A to add a movie to the collection, q to exit')
+        if selection == 'q':
+            break
+        elif selection == 'CN':
+            new_name = input('Type the new name of your collection')
+            curs.execute("UPDATE COLLECTION SET name = %s WHERE collectionID = %s", (new_name, collectionID, ))
+            conn.commit()
+        elif selection == 'D':
+            movieToDelete = input ("Type the id of the movie you want to delete")
+            curs.execute("DELETE FROM CONTAINS WHERE movieID = %s AND collectionID= %s", (movieToDelete, collectionID, ))
+            conn.commit()
+    
+
+def manageCollection(curs: cursor, conn):
+    system('clear')
+    curs.execute("SELECT c.collectionID, c.name AS collection_name, COUNT(cm.movieID) AS num_movies, TO_CHAR(INTERVAL '1 minute' * SUM(m.length), 'HH24:MI') AS total_length FROM COLLECTION c JOIN USER_OWNS_COLLECTION uoc ON c.collectionID = uoc.collectionID JOIN CONTAINS cm ON c.collectionID = cm.collectionID JOIN MOVIE m ON cm.movieID = m.movieID WHERE uoc.userID = %s GROUP BY c.collectionID, c.name ORDER BY c.name ASC, num_movies, total_length;", (CURR_USER_ID,))
+    results = list(curs.fetchall())
+    print(results)
+    menu_items = dict(enumerate(results, start=1))
+    print(menu_items)
+    while True:
+        display_menu(menu_items)
+        selection = input("Select a number or press q to return to main menu")
+        if selection == 'q':
+            system('clear')
+            break
+        elif selection.isnumeric() and int(selection) in menu_items:
+            editCollection(menu_items[int(selection)][0], curs, conn)
+            system('clear')
+            curs.execute("SELECT c.collectionID, c.name AS collection_name, COUNT(cm.movieID) AS num_movies, TO_CHAR(INTERVAL '1 minute' * SUM(m.length), 'HH24:MI') AS total_length FROM COLLECTION c JOIN USER_OWNS_COLLECTION uoc ON c.collectionID = uoc.collectionID JOIN CONTAINS cm ON c.collectionID = cm.collectionID JOIN MOVIE m ON cm.movieID = m.movieID WHERE uoc.userID = %s GROUP BY c.collectionID, c.name ORDER BY c.name ASC, num_movies, total_length;", (CURR_USER_ID,))
+            results = list(curs.fetchall())
+            print(results)
+            menu_items = dict(enumerate(results, start=1))
+            print(menu_items)
+        else:
+            print ("Please select a valid number")
+
+
+
+    # print("A function to manage collections")
 
 
 def searchMovie(curs):
