@@ -22,6 +22,8 @@ def main_loop(cursor, conn):
                            "r: register new user\n"
                            "l: login to database\n"
                            "c: to go to collections\n"
+                           "q: exit program\n"
+                           "c: create collection test\n"
                            "s: search movies\n"
                            "q: exit program\n")
         if user_input == 'q':
@@ -35,6 +37,7 @@ def main_loop(cursor, conn):
         elif user_input == 'c':
             system('clear')
             manageCollection(cursor, conn)
+            createCollections(cursor, conn)
         elif user_input == 's':
             searchMovie(cursor)
         else:
@@ -201,8 +204,14 @@ def login(cursor:cursor):
 
 
 
-def createCollections(curs):
-    print("Function to create collection")
+def createCollections(cursor:cursor, conn):
+    collectionname = input("Name this collection: ")
+    cursor.execute("SELECT MAX(collectionid) FROM collection")
+    max_id = cursor.fetchone()[0] + 1
+    cursor.execute("INSERT INTO collection (collectionid, name) VALUES (%s, %s)", (max_id, collectionname))
+    conn.commit()
+
+    print('Collection created.')
 
 def display_menu(menu):
     for k, function in menu.items():
