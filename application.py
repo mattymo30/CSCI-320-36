@@ -5,6 +5,9 @@ import bcrypt # bcrypt hash used with mockaroo passwords
 from psycopg2.extensions import cursor
 from datetime import date
 
+#global variable to track login status
+logged_in = False
+
 def main_loop(cursor, conn):
     while 1:
         user_input = input("Welcome to the movies database!\n"
@@ -159,7 +162,6 @@ def login(cursor:cursor):
     # if the username did exist
     if not result:
         print("Username not found. Please try again.")
-        return
     
     actual_pass = result[0].encode('utf-8')
     if bcrypt.checkpw(entered_pass, actual_pass):
@@ -183,36 +185,40 @@ def manageCollection(curs):
 
 
 def searchMovie(curs):
-    # Need the user to select by what parameter they are going to be searching by
-    # Take in user input for that parameter and then write queries and return as such
     # Get search parameters from the user
     search_option = input("Search movies by (name/release date/cast members/studio/genre): ").lower()
     search_query = input("Enter your search query: ")
 
     # Construct the SQL query based on user input
     sql_query = """
-                SELECT m.title, m.cast_members, m.director, m.length, m.mpaa, r.release_date
-                FROM movie m
-                LEFT JOIN released r ON m.movieid = r.movieid
-                LEFT JOIN produces p ON m.movieid = p.movieid
-                LEFT JOIN categorize c ON m.movieid = c.movieid
-                WHERE """
+            SELECT m.title, c.fname AS cast_fname, c.lname AS cast_lname, d.fname AS director_fname, d.lname AS director_lname, m.length, m.mpaa, r.releasedate
+            FROM movie m
+            LEFT JOIN released r ON m.movieid = r.movieid
+            LEFT JOIN categorize cat ON m.movieid = cat.movieid
+            LEFT JOIN acts_in ai ON m.movieid = ai.movieid
+            LEFT JOIN contributor c ON ai.contributorid = c.contributorid
+            LEFT JOIN directs dr ON m.movieid = dr.movieid
+            LEFT JOIN contributor d ON dr.contributorid = d.contributorid
+            LEFT JOIN produces pr ON m.movieid = pr.movieid
+            LEFT JOIN contributor p ON pr.contributorid = p.contributorid
+            WHERE """
     
-    #search by name
+    # Search by name
     if search_option == "name":
         sql_query += f"LOWER(m.title) LIKE LOWER('%{search_query}%')"
-    #search by release date
+    # Search by release date
     elif search_option == "release date":
-        sql_query += f"r.release_date = '{search_query}'"
-    #search by cast members
+        sql_query += f"r.releasedate = '{search_query}'"
+    # Search by cast members
     elif search_option == "cast members":
-        sql_query += f"LOWER(m.cast_members) LIKE LOWER('%{search_query}%')"
-    #search by studio
+        # Allow searching by either first name or last name
+        sql_query += f"LOWER(c.fname) LIKE LOWER('%{search_query}%') OR LOWER(c.lname) LIKE LOWER('%{search_query}%')"
+    # Search by studio
     elif search_option == "studio":
-        sql_query += f"LOWER(p.contributorid) LIKE LOWER('%{search_query}%')"
-    #search by genre
+        sql_query += f"LOWER(p.lname) IS NULL AND LOWER(p.fname) LIKE LOWER('%{search_query}%')"
+    # Search by genre
     elif search_option == "genre":
-        sql_query += f"c.genreid = (SELECT genreid FROM genre WHERE LOWER(genre_name) = LOWER('{search_query}'))"
+        sql_query += f"cat.genreid = (SELECT genreid FROM genre WHERE LOWER(type) = LOWER('{search_query}'))"
     else:
         print("Invalid search option.")
         return
@@ -222,29 +228,57 @@ def searchMovie(curs):
     if sort_option == "name":
         sql_query += " ORDER BY m.title ASC"
     elif sort_option == "release date":
-        sql_query += " ORDER BY r.release_date ASC"
+        sql_query += " ORDER BY r.releasedate ASC"
     else:
         print("Invalid sort option.")
         return
 
     # Execute the constructed query
-    cursor.execute(sql_query)
-    results = cursor.fetchall()
+    curs.execute(sql_query)
+    results = curs.fetchall()
 
     # Print the results
     if results:
         print("Search Results:")
+        prev_title = None
+        unique_cast_members = set()
         for result in results:
-            print("Title:", result[0])
-            print("Cast Members:", result[1])
-            print("Director:", result[2])
-            print("Length:", result[3])
-            print("MPAA Rating:", result[4])
-            print("Release Date:", result[5])
-            print()
+            title = result[0]
+            cast_member = f"{result[1]} {result[2]}"
+            director = f"{result[3]} {result[4]}"
+            length = result[5]
+            mpaa_rating = result[6]
+            release_date = result[7]
+
+            # Check if a new movie title is encountered
+            if prev_title != title:
+                # Print cast members and movie details if it's not the first movie
+                if prev_title is not None:
+                    print("Cast Members:", ", ".join(unique_cast_members))
+                    print("Director:", director)
+                    print("Length:", length)
+                    print("MPAA Rating:", mpaa_rating)
+                    print("Release Date:", release_date)
+                    print()  # Print an additional line after each movie
+                    unique_cast_members.clear()  # Reset unique cast members set for the new movie
+
+                print("Title:", title)
+                unique_cast_members.add(cast_member)  # Add the first cast member encountered for the new movie
+
+            else:
+                unique_cast_members.add(cast_member)  # Add cast members for the current movie
+
+            prev_title = title
+        
+        # Print the last movie's details
+        print("Cast Members:", ", ".join(unique_cast_members))
+        print("Director:", director)
+        print("Length:", length)
+        print("MPAA Rating:", mpaa_rating)
+        print("Release Date:", release_date)
+        print()  # Print an additional line after the loop
     else:
         print("No matching movies found.")
-
 
 def getFriends(curs):
     # Write the querty to get and print friends
