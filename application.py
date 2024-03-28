@@ -1,7 +1,10 @@
 # This is the main application file.
 # Pushing out to github to have a starting point
+from datetime import datetime
+import time
+
 from sshtunnel import SSHTunnelForwarder
-import bcrypt # bcrypt hash used with mockaroo passwords
+import bcrypt  # bcrypt hash used with mockaroo passwords
 from psycopg2.extensions import cursor
 from datetime import date
 import sys
@@ -9,13 +12,12 @@ from os import system
 from tabulate import tabulate
 import time
 
-
 CURR_USER = None
 CURR_USER_ID = None
 
-
-#global variable to track login status
+# global variable to track login status
 logged_in = False
+
 
 def main_loop(cursor, conn):
     while 1:
@@ -35,7 +37,7 @@ def main_loop(cursor, conn):
             break
         elif user_input == 'l':
             system('clear')
-            login(cursor)
+            login(cursor, conn)
         elif user_input == 'r':
             system('clear')
             createAccount(cursor, conn)
@@ -47,12 +49,6 @@ def main_loop(cursor, conn):
             searchMovie(cursor)
         elif user_input == 'cc':
             createCollections(cursor, conn)
-        elif user_input == 'w':
-            system('clear')
-            watch_movie(cursor, conn)
-        elif user_input == 'wc':
-            system('clear')
-            watch_collection(cursor, conn)
         elif user_input == 'f':
             follow(cursor, conn)
         elif user_input == 'u':
@@ -199,77 +195,98 @@ def unfollow(curs:cursor):
 
 """----------------Authentication------------------"""
 
+
 # Helper function for login/signup
 # Returns a hashed password
-def hash_pass(password:str):
+def hash_pass(password: str):
     bytes = password.encode('utf-8')
     salt = bcrypt.gensalt()
     password = bcrypt.hashpw(bytes, salt)
-    password = password.decode() # Changes from byte string to regular string
+    password = password.decode()  # Changes from byte string to regular string
     return password
 
-def createAccount(cursor:cursor, conn):
+
+def createAccount(cursor: cursor, conn):
     """
     Register a user to the database
     :param cursor: cursor to connect to the database and tables
     """
     # check if username already exists
     username = input("Type the new account's username: ")
-    cursor.execute("SELECT count(*) FROM person WHERE username = (%s);",(username,))
+    cursor.execute("SELECT count(*) FROM person WHERE username = (%s);", (username,))
     results = cursor.fetchall()
 
     if results[0][0] > 0:
         print("username already exists!")
-        return 
-    
+        return
+
     # password hashing
     password = hash_pass(input("Type in the new account's password: "))
-    
+
     # Other info
     email = input("Enter your email address: ")
     fname = input("Enter your first name: ")
     lname = input("Enter your last name: ")
-    dob = input("Enter your date of birth (YYYY-MM-DD): ") 
-    
+
+    # Loop until user inputs correct DOB format
+    while True:
+        dob_i = input("Enter your date of birth (YYYY-MM-DD): ")
+        try:
+            dob = datetime.strptime(dob_i, "%Y-%m-%d").date()
+            break
+        except ValueError:
+            print("Incorrect date format. Please enter the date in YYYY-MM-DD format.")
+
     # record time and date of account creation
     creation_date = date.today()
+    t = time.localtime()
+    creation_time = time.strftime("%H:%M:%S", t)
 
     # Gets total users for primary key
     # Works because users can't be deleted
     cursor.execute("SELECT count(*) FROM person")
     total_users = cursor.fetchall()[0][0]
-    
+
     cursor.execute("""
-        INSERT INTO person (userid, username, password, email, fname, lname, dob, creation_date, last_access)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NULL)
-        """, 
+        INSERT INTO person (userid, username, password, email, fname, lname, dob)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """,
         (
-            int(total_users+1),
+            int(total_users + 1),
             username,
             password,
             email,
             fname,
             lname,
-            dob,
-            creation_date
+            dob
         )
     )
+
+    cursor.execute("""
+        INSERT INTO account_creation (userid, creation_date, time_created)
+        VALUES (%s, %s, %s)
+        """,
+                   (
+                       int(total_users + 1),
+                       creation_date,
+                       creation_time
+                   ))
+
     conn.commit()
 
     print("Account has been created!")
 
 
-def login(cursor:cursor):
-
-    global CURR_USER
-    global CURR_USER_ID
-
+def login(cursor: cursor, conn):
     """
     Attempt to log in a user to the database
     :param cursor: cursor to connect to the database and tables
     """
 
-    if CURR_USER != None:
+    global CURR_USER
+    global CURR_USER_ID
+
+    if CURR_USER is not None:
         print(f"You are already logged into an account: {CURR_USER}")
         return
 
@@ -278,26 +295,45 @@ def login(cursor:cursor):
     entered_pass = input("Enter your password: ").encode('utf-8')
 
     # Gets password from DB
-    cursor.execute("SELECT password FROM person WHERE username = %s",(username,))
+    cursor.execute("SELECT password, userid FROM person WHERE username = %s",
+                   (username,))
     result = cursor.fetchone()
 
     # if the username did exist
     if not result:
         print("Username not found. Please try again.")
-    
-    actual_pass = result[0].encode('utf-8')
+        return
+
+    actual_pass, userid = result[0].encode('utf-8'), result[1]
     if bcrypt.checkpw(entered_pass, actual_pass):
-        print("Login successful")
         CURR_USER = username
         cursor.execute("SELECT userID FROM person WHERE username = %s", (CURR_USER,))
         CURR_USER_ID = cursor.fetchone()[0]
+        print(f"Login successful.\n Welcome {CURR_USER}")
+
+        login_date = date.today()
+        t = time.localtime()
+        login_time = time.strftime("%H:%M:%S", t)
+        cursor.execute("""select count(*) from login""")
+        relationshipid = cursor.fetchall()[0][0] + 1
+        cursor.execute("""
+            INSERT INTO login (loginid, userid, date_logged_in, time_logged_in)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (
+                relationshipid,
+                CURR_USER_ID,
+                login_date,
+                login_time
+            )
+        )
+        conn.commit()
 
     else:
         print("Incorrect password. Please try again.")
 
 
-
-def createCollections(cursor:cursor, conn):
+def createCollections(cursor: cursor, conn):
     collectionname = input("Name this collection: ")
     cursor.execute("SELECT MAX(collectionid) FROM collection")
     max_id = cursor.fetchone()[0] + 1
@@ -308,10 +344,12 @@ def createCollections(cursor:cursor, conn):
 
     print('Collection created.')
 
+
 def display_menu(menu):
     print("In this function")
     for k, function in menu.items():
-        print(str(k) + ": Collection Name " + str(function[1]) + " | Number of Movies in Collection " + str(function[2]) + " | Total Run time in Hours:minutes " + str(function[3]))
+        print(str(k) + ": Collection Name " + str(function[1]) + " | Number of Movies in Collection " + str(
+            function[2]) + " | Total Run time in Hours:minutes " + str(function[3]))
 
 
 def record_collection_watch(collectionID: int, curs: cursor, conn):
@@ -353,42 +391,46 @@ def watch_collection(curs: cursor, conn):
 def editCollection(collectionID: int, curs: cursor, conn):
     while True:
         system('clear')
-        curs.execute("SELECT m.movieID, m.title, m.mpaa, m.length FROM CONTAINS c JOIN MOVIE m ON c.movieID = m.movieID WHERE c.collectionID = %s;", (collectionID, ))
+        curs.execute(
+            "SELECT m.movieID, m.title, m.mpaa, m.length FROM CONTAINS c JOIN MOVIE m ON c.movieID = m.movieID WHERE c.collectionID = %s;",
+            (collectionID,))
         results = curs.fetchall()
         # printing out all the movies in the collection
         print(tabulate(results, headers=['Movie id', 'Movie Name', 'Movie Rating', 'Movie Runtime in seconds']))
-        selection = input('Type DW to Delete whole collection, Type CN to change collection name, Type D to delete a movie from collection, Type A to add a movie to the collection, q to exit')
+        selection = input(
+            'Type DW to Delete whole collection, Type CN to change collection name, Type D to delete a movie from collection, Type A to add a movie to the collection, q to exit')
         if selection == 'q':
             break
         elif selection == 'CN':
             new_name = input('Type the new name of your collection')
-            curs.execute("UPDATE COLLECTION SET name = %s WHERE collectionID = %s", (new_name, collectionID, ))
+            curs.execute("UPDATE COLLECTION SET name = %s WHERE collectionID = %s", (new_name, collectionID,))
             conn.commit()
         elif selection == 'D':
-            movieToDelete = input ("Type the id of the movie you want to delete")
-            curs.execute("DELETE FROM CONTAINS WHERE movieID = %s AND collectionID= %s", (movieToDelete, collectionID, ))
+            movieToDelete = input("Type the id of the movie you want to delete")
+            curs.execute("DELETE FROM CONTAINS WHERE movieID = %s AND collectionID= %s", (movieToDelete, collectionID,))
             conn.commit()
         elif selection == 'A':
-            movieToAdd = input ("Type the name of the movie you want to add")
-            curs.execute("SELECT movieID, title FROM MOVIE WHERE LOWER(title) LIKE LOWER(%s)", (movieToAdd, ))
+            movieToAdd = input("Type the name of the movie you want to add")
+            curs.execute("SELECT movieID, title FROM MOVIE WHERE LOWER(title) LIKE LOWER(%s)", (movieToAdd,))
             results = curs.fetchall()
             print(tabulate(results, headers=['Movie Id', 'Movie Title']))
-            movieIdToAdd = input ("Type the id of the movie you want to add")
+            movieIdToAdd = input("Type the id of the movie you want to add")
             curs.execute("INSERT INTO CONTAINS (collectionID, movieID) VALUES (%s, %s)", ((collectionID, movieIdToAdd)))
             conn.commit()
         elif selection == "DW":
-            curs.execute("DELETE FROM CONTAINS WHERE collectionID = %s", (collectionID, ))
-            curs.execute("DELETE FROM USER_OWNS_COLLECTION WHERE collectionID = %s", (collectionID, ))
-            curs.execute("DELETE FROM COLLECTION WHERE collectionID = %s",(collectionID, ))
+            curs.execute("DELETE FROM CONTAINS WHERE collectionID = %s", (collectionID,))
+            curs.execute("DELETE FROM USER_OWNS_COLLECTION WHERE collectionID = %s", (collectionID,))
+            curs.execute("DELETE FROM COLLECTION WHERE collectionID = %s", (collectionID,))
             conn.commit()
 
-    
 
 def manageCollection(curs: cursor, conn):
     print("IN this statement")
-    curs.execute("SELECT c.collectionid, c.name AS collection_name, COUNT(cm.movieID) AS num_movies, CONCAT(FLOOR(SUM(m.length) / 3600), ':', CASE WHEN FLOOR((SUM(m.length) %% 3600) / 60) < 10 THEN CONCAT('0', FLOOR((SUM(m.length) %% 3600) / 60)) ELSE CAST(FLOOR((SUM(m.length) %% 3600) / 60) AS VARCHAR) END ) AS total_length FROM COLLECTION c JOIN USER_OWNS_COLLECTION uoc ON c.collectionID = uoc.collectionID LEFT JOIN CONTAINS cm ON c.collectionID = cm.collectionID LEFT JOIN MOVIE m ON cm.movieID = m.movieID WHERE uoc.userID = %s GROUP BY c.collectionID, c.name ORDER BY c.name ASC;", (CURR_USER_ID,))
+    curs.execute(
+        "SELECT c.collectionid, c.name AS collection_name, COUNT(cm.movieID) AS num_movies, CONCAT(FLOOR(SUM(m.length) / 3600), ':', CASE WHEN FLOOR((SUM(m.length) %% 3600) / 60) < 10 THEN CONCAT('0', FLOOR((SUM(m.length) %% 3600) / 60)) ELSE CAST(FLOOR((SUM(m.length) %% 3600) / 60) AS VARCHAR) END ) AS total_length FROM COLLECTION c JOIN USER_OWNS_COLLECTION uoc ON c.collectionID = uoc.collectionID LEFT JOIN CONTAINS cm ON c.collectionID = cm.collectionID LEFT JOIN MOVIE m ON cm.movieID = m.movieID WHERE uoc.userID = %s GROUP BY c.collectionID, c.name ORDER BY c.name ASC;",
+        (CURR_USER_ID,))
     # curs.execute('SELECT c.collectionid, c.name AS collection_name, COUNT(cm.movieID) AS num_movies, CONCAT(FLOOR(SUM(m.length) / 3600), ':', CASE WHEN FLOOR((SUM(m.length) % 3600) / 60) < 10 THEN CONCAT('0', FLOOR((SUM(m.length) % 3600) / 60)) ELSE CAST(FLOOR((SUM(m.length) % 3600) / 60) AS VARCHAR) END ) AS total_length FROM COLLECTION c JOIN USER_OWNS_COLLECTION uoc ON c.collectionID = uoc.collectionID LEFT JOIN CONTAINS cm ON c.collectionID = cm.collectionID LEFT JOIN MOVIE m ON cm.movieID = m.movieID WHERE uoc.userID = %s GROUP BY c.collectionID, c.name ORDER BY c.name ASC;', ((CURR_USER_ID,))
-    print ("Executed the cursor")
+    print("Executed the cursor")
     results = list(curs.fetchall())
     print(results)
     menu_items = dict(enumerate(results, start=1))
@@ -401,15 +443,15 @@ def manageCollection(curs: cursor, conn):
             break
         elif selection.isnumeric() and int(selection) in menu_items:
             editCollection(menu_items[int(selection)][0], curs, conn)
-            curs.execute("SELECT c.collectionid, c.name AS collection_name, COUNT(cm.movieID) AS num_movies, CONCAT(FLOOR(SUM(m.length) / 3600), ':', CASE WHEN FLOOR((SUM(m.length) %% 3600) / 60) < 10 THEN CONCAT('0', FLOOR((SUM(m.length) %% 3600) / 60)) ELSE CAST(FLOOR((SUM(m.length) %% 3600) / 60) AS VARCHAR) END ) AS total_length FROM COLLECTION c JOIN USER_OWNS_COLLECTION uoc ON c.collectionID = uoc.collectionID LEFT JOIN CONTAINS cm ON c.collectionID = cm.collectionID LEFT JOIN MOVIE m ON cm.movieID = m.movieID WHERE uoc.userID = %s GROUP BY c.collectionID, c.name ORDER BY c.name ASC;", (CURR_USER_ID,))
+            curs.execute(
+                "SELECT c.collectionid, c.name AS collection_name, COUNT(cm.movieID) AS num_movies, CONCAT(FLOOR(SUM(m.length) / 3600), ':', CASE WHEN FLOOR((SUM(m.length) %% 3600) / 60) < 10 THEN CONCAT('0', FLOOR((SUM(m.length) %% 3600) / 60)) ELSE CAST(FLOOR((SUM(m.length) %% 3600) / 60) AS VARCHAR) END ) AS total_length FROM COLLECTION c JOIN USER_OWNS_COLLECTION uoc ON c.collectionID = uoc.collectionID LEFT JOIN CONTAINS cm ON c.collectionID = cm.collectionID LEFT JOIN MOVIE m ON cm.movieID = m.movieID WHERE uoc.userID = %s GROUP BY c.collectionID, c.name ORDER BY c.name ASC;",
+                (CURR_USER_ID,))
             results = list(curs.fetchall())
             print(results)
             menu_items = dict(enumerate(results, start=1))
             print(menu_items)
         else:
-            print ("Please select a valid number")
-
-
+            print("Please select a valid number")
 
     # print("A function to manage collections")
 
@@ -432,7 +474,7 @@ def searchMovie(curs):
             LEFT JOIN produces pr ON m.movieid = pr.movieid
             LEFT JOIN contributor p ON pr.contributorid = p.contributorid
             WHERE """
-    
+
     # Search by name
     if search_option == "name":
         sql_query += f"LOWER(m.title) LIKE LOWER('%{search_query}%')"
@@ -499,7 +541,7 @@ def searchMovie(curs):
                 unique_cast_members.add(cast_member)  # Add cast members for the current movie
 
             prev_title = title
-        
+
         # Print the last movie's details
         print("Cast Members:", ", ".join(unique_cast_members))
         print("Director:", director)
