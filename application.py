@@ -131,7 +131,6 @@ def createAccount(cursor:cursor, conn):
     :param cursor: cursor to connect to the database and tables
     """
     # check if username already exists
-    # mfindon0 is expected to have 1
     username = input("Type the new account's username: ")
     cursor.execute("SELECT count(*) FROM person WHERE username = (%s);",(username,))
     results = cursor.fetchall()
@@ -147,7 +146,6 @@ def createAccount(cursor:cursor, conn):
     email = input("Enter your email address: ")
     fname = input("Enter your first name: ")
     lname = input("Enter your last name: ")
-    # TODO check if user inputted date in correct format?
     dob = input("Enter your date of birth (YYYY-MM-DD): ") 
     
     # record time and date of account creation
@@ -180,7 +178,6 @@ def createAccount(cursor:cursor, conn):
 
 def login(cursor:cursor):
 
-
     global CURR_USER
     global CURR_USER_ID
 
@@ -188,10 +185,6 @@ def login(cursor:cursor):
     Attempt to log in a user to the database
     :param cursor: cursor to connect to the database and tables
     """
-    # TODO Find a way to hold CUR_USER
-    # if CUR_USER != "":
-    #     print(f"You are already logged into an account: {CUR_USER}")
-    #     return
 
     if CURR_USER != None:
         print(f"You are already logged into an account: {CURR_USER}")
@@ -212,12 +205,9 @@ def login(cursor:cursor):
     actual_pass = result[0].encode('utf-8')
     if bcrypt.checkpw(entered_pass, actual_pass):
         print("Login successful")
-        # TODO Find a way to hold CUR_USER
         CURR_USER = username
         cursor.execute("SELECT userID FROM person WHERE username = %s", (CURR_USER,))
-        # CURR_USER_ID = cursor.fetchone()[0]
-        CURR_USER_ID = 2152
-        # print(CURR_USER_ID)
+        CURR_USER_ID = cursor.fetchone()[0]
 
     else:
         print("Incorrect password. Please try again.")
