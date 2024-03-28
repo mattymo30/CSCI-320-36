@@ -503,13 +503,4 @@ def searchMovie(curs):
         print("Release Date:", release_date)
         print()  # Print an additional line after the loop
     else:
-<<<<<<< HEAD
         print("No matching movies found.")
-
-
-def getFriends(curs):
-    # Write the querty to get and print friends
-    print("Function to get friends")
-=======
-        print("No matching movies found.")
->>>>>>> user-friend
