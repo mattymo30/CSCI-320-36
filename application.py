@@ -16,6 +16,8 @@ def main_loop(cursor, conn):
                            "q: exit program\n"
                            "c: create collection test\n"
                            "s: search movies\n"
+                           "f: follow another user\n"
+                           "u: unfollow a user\n"
                            "q: exit program\n")
         if user_input == 'q':
             break
@@ -27,6 +29,10 @@ def main_loop(cursor, conn):
             createCollections(cursor, conn)
         elif user_input == 's':
             searchMovie(cursor)
+        elif user_input == 'f':
+            follow(cursor, conn)
+        elif user_input == 'u':
+            unfollow(cursor, conn)
         else:
             cursor.execute("SELECT * FROM genre")
             results = cursor.fetchall()
@@ -68,20 +74,64 @@ def watch_collection(curs: cursor):
     # ask for name
     pass
 
+"""-------------------Friends---------------------"""
+def search_users(curs:cursor, email:str):
+    # Gets potential friend info
+    curs.execute("select username,userid from person where email = (%s);",(email,))
+    result = curs.fetchall()
+    if result == []: # Not in DB
+        print("User not found.")
+        return None
+    username = result[0][0]
+    userid = result[0][1]
+    
+    # Confirms follow
+    answer = input(f"\nEnter y if you want to follow '{username}'.\nEnter n to cancel.\n")
+    if answer == "y":
+        return True
+    elif answer == "n":
+        return userid
+    else:
+        print("Invalid response. Try again.")
+        return None
+    
 
-def follow(curs: cursor):
-    # ask for user email to follow
-    pass
+def follow(curs: cursor, conn):
+    email = ""
+    userid = 0 # TODO Update this when login is fixed
+
+    while(True):
+        # Prompt user for email
+        email = input("\nFollow Users (press q to exit).\nSearch for a user by their email: ")
+        if email == "q": # Break case
+            break
+
+        # Search email
+        friendid = search_users(curs, email)
+        if not friendid: # Problem with search
+            break
+
+        # Make them friends
+        cursor.execute(
+            """
+            INSERT INTO friendrelation (userid, friendid)
+            VALUES (%s, %s)
+            """,
+            (friendid,userid)
+        )
+        conn.commit()
 
 
-def search_users(curs: cursor):
-    # Ask for user email
-    pass
+def getFriends(curs):
+    # Write the querty to get and print friends
+    print("Function to get friends")
 
-
-def unfollow(curs: cursor):
+def unfollow(curs: cursor, conn):
+    
     # ask for user email
     pass
+
+"""----------------Authentication------------------"""
 
 # Helper function for login/signup
 # Returns a hashed password
@@ -289,7 +339,3 @@ def searchMovie(curs):
         print()  # Print an additional line after the loop
     else:
         print("No matching movies found.")
-
-def getFriends(curs):
-    # Write the querty to get and print friends
-    print("Function to get friends")
