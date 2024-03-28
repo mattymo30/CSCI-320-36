@@ -239,20 +239,19 @@ def createAccount(cursor: cursor, conn):
     total_users = cursor.fetchall()[0][0]
 
     cursor.execute("""
-        INSERT INTO person (userid, username, password, email, fname, lname, dob, creation_date, last_access)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NULL)
+        INSERT INTO person (userid, username, password, email, fname, lname, dob)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         """,
-                   (
-                       int(total_users + 1),
-                       username,
-                       password,
-                       email,
-                       fname,
-                       lname,
-                       dob,
-                       creation_date
-                   )
-                   )
+        (
+            int(total_users + 1),
+            username,
+            password,
+            email,
+            fname,
+            lname,
+            dob
+        )
+    )
 
     cursor.execute("""
         INSERT INTO account_creation (userid, creation_date, time_created)
@@ -298,24 +297,26 @@ def login(cursor: cursor, conn):
 
     actual_pass, userid = result[0].encode('utf-8'), result[1]
     if bcrypt.checkpw(entered_pass, actual_pass):
-        print("Login successful")
+        print(f"Login successful.\n Welcome {CURR_USER}")
         CURR_USER = username
         CURR_USER_ID = userid
-        print(CURR_USER_ID)
 
         login_date = date.today()
         t = time.localtime()
         login_time = time.strftime("%H:%M:%S", t)
+        cursor.execute("""select count(*) from login""")
+        relationshipid = cursor.fetchall()[0][0] + 1
         cursor.execute("""
-        INSERT INTO login (userid, date_logged_in, time_logged_in)
-        VALUES (%s, %s, %s)
-        """,
-                       (
-                           int(userid),
-                           login_date,
-                           login_time
-                       ))
-
+            INSERT INTO login (loginid, userid, date_logged_in, time_logged_in)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (
+                relationshipid,
+                CURR_USER_ID,
+                login_date,
+                login_time
+            )
+        )
         conn.commit()
 
     else:
