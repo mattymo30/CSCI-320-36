@@ -21,18 +21,29 @@ logged_in = False
 
 def main_loop(cursor, conn):
     while 1:
-        user_input = input("Welcome to the movies database!\n"
-                           "r: register new user\n"
-                           "l: login to database\n"
-                           "c: to go to collections\n"
-                           "q: exit program\n"
-                           "cc: create collection\n"
-                           "s: search movies\n"
-                           "w: to watch a movie\n"
-                           "wc: to watch a collection\n"
-                           "f: follow another user\n"
-                           "u: unfollow a user\n"
-                           "q: exit program\n")
+        if CURR_USER: # Once logged in
+            user_input = input(
+                "Welcome to the movies database!\n"
+                "r: register new user\n"
+                "l: login to database\n"
+                "c: to go to collections\n"
+                "q: exit program\n"
+                "cc: create collection\n"
+                "s: search movies\n"
+                "w: to watch a movie\n"
+                "wc: to watch a collection\n"
+                "f: follow another user\n"
+                "u: unfollow a user\n"
+                "q: exit program\n"
+                )
+        else: # if not logged in
+            user_input = input(
+                "Welcome to the movies database!\n"
+                "r: register new user\n"
+                "l: login to database\n"
+                "q: exit program\n"
+            )
+            
         if user_input == 'q':
             break
         elif user_input == 'l':
@@ -54,9 +65,7 @@ def main_loop(cursor, conn):
         elif user_input == 'u':
             unfollow(cursor, conn)
         else:
-            cursor.execute("SELECT * FROM genre")
-            results = cursor.fetchall()
-            print(results)
+            print("invalid command.")
 
 
 # Adds movie to collection
