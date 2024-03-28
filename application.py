@@ -88,17 +88,17 @@ def search_users(curs:cursor, email:str):
     # Confirms follow
     answer = input(f"\nEnter y if you want to follow '{username}'.\nEnter n to cancel.\n")
     if answer == "y":
-        return True
-    elif answer == "n":
         return userid
+    elif answer == "n":
+        return None
     else:
         print("Invalid response. Try again.")
         return None
     
 
-def follow(curs: cursor, conn):
+def follow(curs:cursor, conn):
     email = ""
-    userid = 0 # TODO Update this when login is fixed
+    userid = 4179 # TODO Update this when login is fixed
 
     while(True):
         # Prompt user for email
@@ -111,25 +111,59 @@ def follow(curs: cursor, conn):
         if not friendid: # Problem with search
             break
 
+        curs.execute("select count(*) from friendrelation")
+        relationshipid = curs.fetchall()[0][0] + 1 # total relationships
+
         # Make them friends
-        cursor.execute(
+        curs.execute(
             """
-            INSERT INTO friendrelation (userid, friendid)
-            VALUES (%s, %s)
+            INSERT INTO friendrelation (relationshipid, userid, friendid)
+            VALUES (%s, %s, %s)
             """,
-            (friendid,userid)
+            (relationshipid,userid,friendid)
         )
         conn.commit()
+        print("Friend added!")
 
+def getFriends(curs:cursor):
+    userid = 4179 # TODO Update this when login is fixed
+    curs.execute(
+        """
+        select p.username, f.relationshipid
+        from person p
+        inner join friendrelation f
+        on p.userid = f.friendid and f.userid = %s;
+        """,
+        (userid,)
+    )
+    # list of (username, relationshipid) tuples
+    freinds = curs.fetchall()
 
-def getFriends(curs):
-    # Write the querty to get and print friends
-    print("Function to get friends")
+    print("\nAll Friends:")
+    for i in range(len(freinds)):
+        print(f"{i+1}. {freinds[i][0]}")
+    return freinds
 
-def unfollow(curs: cursor, conn):
-    
-    # ask for user email
-    pass
+def unfollow(curs:cursor, conn):
+    while(True):
+        # Display friends of user
+        all_friends:dict = getFriends(curs)
+        username = input("\nUnfollow Users (press q to exit).\nEnter the username you want to remove: ")
+        if username == "q": # Break case
+            break
+
+        # Deletes friend
+        for friend in all_friends:
+            if friend[0] == username:
+                curs.execute(
+                    """
+                    DELETE FROM friendrelation WHERE relationshipid = (%s);
+                    """,
+                    (friend[1],)
+                )
+                print(f"Successfully unfollowed {username}")
+            else:
+                print("Invalid username entered.")
 
 """----------------Authentication------------------"""
 
