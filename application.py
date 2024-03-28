@@ -14,7 +14,7 @@ import time
 
 CURR_USER = None
 CURR_USER_ID = None
-CLEAR_COMM = 'clear' # switch to cls if windows
+CLEAR_COMM = 'cls' # switch to cls if windows
 
 # global variable to track login status
 logged_in = False
