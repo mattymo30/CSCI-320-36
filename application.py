@@ -61,7 +61,7 @@ def main_loop(cursor, conn):
         elif user_input == 'f':
             follow(cursor, conn)
         elif user_input == 'u':
-            unfollow(cursor, conn)
+            unfollow(cursor)
         else:
             print("invalid command.")
 
