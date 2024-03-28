@@ -464,97 +464,131 @@ def manageCollection(curs: cursor, conn):
 
 
 def searchMovie(curs):
-    # Get search parameters from the user
-    search_option = input("Search movies by (name/release date/cast members/studio/genre): ").lower()
-    search_query = input("Enter your search query: ")
+    while True:
+        # Get search parameters from the user
+        search_option = input("Search movies by (name/release date/cast members/studio/genre): ").lower()
+        search_query = input("Enter your search query: ")
 
-    # Construct the SQL query based on user input
-    sql_query = """
-            SELECT m.title, c.fname AS cast_fname, c.lname AS cast_lname, d.fname AS director_fname, d.lname AS director_lname, m.length, m.mpaa, r.releasedate
-            FROM movie m
-            LEFT JOIN released r ON m.movieid = r.movieid
-            LEFT JOIN categorize cat ON m.movieid = cat.movieid
-            LEFT JOIN acts_in ai ON m.movieid = ai.movieid
-            LEFT JOIN contributor c ON ai.contributorid = c.contributorid
-            LEFT JOIN directs dr ON m.movieid = dr.movieid
-            LEFT JOIN contributor d ON dr.contributorid = d.contributorid
-            LEFT JOIN produces pr ON m.movieid = pr.movieid
-            LEFT JOIN contributor p ON pr.contributorid = p.contributorid
-            WHERE """
+        # Construct the SQL query based on user input
+        sql_query = """
+                SELECT m.title, c.fname AS cast_fname, c.lname AS cast_lname, d.fname AS director_fname, d.lname AS director_lname, m.length, m.mpaa, r.releasedate
+                FROM movie m
+                LEFT JOIN released r ON m.movieid = r.movieid
+                LEFT JOIN categorize cat ON m.movieid = cat.movieid
+                LEFT JOIN acts_in ai ON m.movieid = ai.movieid
+                LEFT JOIN contributor c ON ai.contributorid = c.contributorid
+                LEFT JOIN directs dr ON m.movieid = dr.movieid
+                LEFT JOIN contributor d ON dr.contributorid = d.contributorid
+                LEFT JOIN produces pr ON m.movieid = pr.movieid
+                LEFT JOIN contributor p ON pr.contributorid = p.contributorid
+                WHERE """
 
-    # Search by name
-    if search_option == "name":
-        sql_query += f"LOWER(m.title) LIKE LOWER('%{search_query}%')"
-    # Search by release date
-    elif search_option == "release date":
-        sql_query += f"r.releasedate = '{search_query}'"
-    # Search by cast members
-    elif search_option == "cast members":
-        # Allow searching by either first name or last name
-        sql_query += f"LOWER(c.fname) LIKE LOWER('%{search_query}%') OR LOWER(c.lname) LIKE LOWER('%{search_query}%')"
-    # Search by studio
-    elif search_option == "studio":
-        sql_query += f"LOWER(p.lname) IS NULL AND LOWER(p.fname) LIKE LOWER('%{search_query}%')"
-    # Search by genre
-    elif search_option == "genre":
-        sql_query += f"cat.genreid = (SELECT genreid FROM genre WHERE LOWER(type) = LOWER('{search_query}'))"
-    else:
-        print("Invalid search option.")
-        return
+        # Search by name
+        if search_option == "name":
+            sql_query += f"LOWER(m.title) LIKE LOWER('%{search_query}%')"
+        # Search by release date
+        elif search_option == "release date":
+            sql_query += f"r.releasedate = '{search_query}'"
+        # Search by cast members
+        elif search_option == "cast members":
+            # Allow searching by either first name or last name
+            sql_query += f"LOWER(c.fname) LIKE LOWER('%{search_query}%') OR LOWER(c.lname) LIKE LOWER('%{search_query}%')"
+        # Search by studio
+        elif search_option == "studio":
+            sql_query += f"LOWER(p.lname) IS NULL AND LOWER(p.fname) LIKE LOWER('%{search_query}%')"
+        # Search by genre
+        elif search_option == "genre":
+            sql_query += f"cat.genreid = (SELECT genreid FROM genre WHERE LOWER(type) = LOWER('{search_query}'))"
+        else:
+            print("Invalid search option.")
+            return
 
-    # Sorting the result
-    sort_option = input("Sort results by (name/release date): ").lower()
-    if sort_option == "name":
-        sql_query += " ORDER BY m.title ASC"
-    elif sort_option == "release date":
-        sql_query += " ORDER BY r.releasedate ASC"
-    else:
-        print("Invalid sort option.")
-        return
-
-    # Execute the constructed query
-    curs.execute(sql_query)
-    results = curs.fetchall()
-
-    # Print the results
-    if results:
-        print("Search Results:")
-        prev_title = None
-        unique_cast_members = set()
-        for result in results:
-            title = result[0]
-            cast_member = f"{result[1]} {result[2]}"
-            director = f"{result[3]} {result[4]}"
-            length = result[5]
-            mpaa_rating = result[6]
-            release_date = result[7]
-
-            # Check if a new movie title is encountered
-            if prev_title != title:
-                # Print cast members and movie details if it's not the first movie
-                if prev_title is not None:
-                    print("Cast Members:", ", ".join(unique_cast_members))
-                    print("Director:", director)
-                    print("Length:", length)
-                    print("MPAA Rating:", mpaa_rating)
-                    print("Release Date:", release_date)
-                    print()  # Print an additional line after each movie
-                    unique_cast_members.clear()  # Reset unique cast members set for the new movie
-
-                print("Title:", title)
-                unique_cast_members.add(cast_member)  # Add the first cast member encountered for the new movie
-
+        # Sorting loop
+        while True:
+            # Sorting the result
+            sort_option = input("Sort results by (name/studio/genre/release date): ").lower()
+            if sort_option == "name":
+                sort_clause = " ORDER BY m.title"
+            elif sort_option == "studio":
+                sort_clause = " ORDER BY p.fname, p.lname"
+            elif sort_option == "genre":
+                sort_clause = " ORDER BY cat.genreid"
+            elif sort_option == "release date":
+                sort_clause = " ORDER BY r.releasedate"
             else:
-                unique_cast_members.add(cast_member)  # Add cast members for the current movie
+                print("Invalid sort option.")
+                return
+            
+            # Prompt for sorting order
+            sort_order = input("Sort in (ascending/descending) order: ").lower()
+            if sort_order == "ascending":
+                sort_clause += " ASC"
+            elif sort_order == "descending":
+                sort_clause += " DESC"
+            else:
+                print("Invalid sort order.")
+                return
 
-            prev_title = title
+            # Execute the constructed query
+            curs.execute(sql_query + sort_clause)
+            results = curs.fetchall()
 
-        # Print the last movie's details
-        print("Cast Members:", ", ".join(unique_cast_members))
-        print("Director:", director)
-        print("Length:", length)
-        print("MPAA Rating:", mpaa_rating)
-        print("Release Date:", release_date)
-        print()  # Print an additional line after the loop
-    else:
-        print("No matching movies found.")
+            # Print the results
+            if results:
+                print("Search Results:")
+                prev_title = None
+                unique_cast_members = set()
+                for result in results:
+                    title = result[0]
+                    cast_member = f"{result[1]} {result[2]}"
+                    director = f"{result[3]} {result[4]}"
+                    length = result[5]
+                    mpaa_rating = result[6]
+                    release_date = result[7]
+
+                    # Check if a new movie title is encountered
+                    if prev_title != title:
+                        # Print cast members and movie details if it's not the first movie
+                        if prev_title is not None:
+                            print("Cast Members:", ", ".join(unique_cast_members))
+                            print("Director:", director)
+                            print("Length:", length)
+                            print("MPAA Rating:", mpaa_rating)
+                            print("Release Date:", release_date)
+                            print()  # Print an additional line after each movie
+                            unique_cast_members.clear()  # Reset unique cast members set for the new movie
+
+                        print("Title:", title)
+                        unique_cast_members.add(cast_member)  # Add the first cast member encountered for the new movie
+
+                    else:
+                        unique_cast_members.add(cast_member)  # Add cast members for the current movie
+
+                    prev_title = title
+
+                # Print the last movie's details
+                print("Cast Members:", ", ".join(unique_cast_members))
+                print("Director:", director)
+                print("Length:", length)
+                print("MPAA Rating:", mpaa_rating)
+                print("Release Date:", release_date)
+                print()  # Print an additional line after the loop
+            else:
+                print("No matching movies found.")
+
+            # Ask the user if they want to sort again
+            sort_again = input("Do you want to sort the results again? (yes/no): ").lower()
+            if sort_again != "yes":
+                break  # Exit the sorting loop if the user doesn't want to sort again
+
+        # Ask the user if they want to search again
+        search_again = input("Do you want to search again? (yes/no): ").lower()
+        if search_again != "yes":
+            break  # Exit the search loop if the user doesn't want to search again
+
+
+
+
+def getFriends(curs):
+    # Write the querty to get and print friends
+    print("Function to get friends")
