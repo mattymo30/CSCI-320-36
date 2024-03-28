@@ -14,6 +14,7 @@ import time
 
 CURR_USER = None
 CURR_USER_ID = None
+CLEAR_COMM = 'clear' # switch to cls if windows
 
 # global variable to track login status
 logged_in = False
@@ -24,8 +25,6 @@ def main_loop(cursor, conn):
         if CURR_USER: # Once logged in
             user_input = input(
                 "Welcome to the movies database!\n"
-                "r: register new user\n"
-                "l: login to database\n"
                 "c: to go to collections\n"
                 "q: exit program\n"
                 "cc: create collection\n"
@@ -43,19 +42,15 @@ def main_loop(cursor, conn):
                 "l: login to database\n"
                 "q: exit program\n"
             )
-            
+
         if user_input == 'q':
             break
         elif user_input == 'l':
-            system('clear')
             login(cursor, conn)
         elif user_input == 'r':
-            system('clear')
             createAccount(cursor, conn)
         elif user_input == 'c':
-            system('clear')
             manageCollection(cursor, conn)
-            system('clear')
         elif user_input == 's':
             searchMovie(cursor)
         elif user_input == 'cc':
@@ -63,9 +58,10 @@ def main_loop(cursor, conn):
         elif user_input == 'f':
             follow(cursor, conn)
         elif user_input == 'u':
-            unfollow(cursor, conn)
+            unfollow(cursor)
         else:
             print("invalid command.")
+        system(CLEAR_COMM)
 
 
 # Adds movie to collection
@@ -272,7 +268,7 @@ def createAccount(cursor: cursor, conn):
     )
 
     cursor.execute("""
-        INSERT INTO account_creation (userid, creation_date, time_created)
+        INSERT INTO account_creation (userid, date_created, time_created)
         VALUES (%s, %s, %s)
         """,
                    (
@@ -587,10 +583,3 @@ def searchMovie(curs):
         search_again = input("Do you want to search again? (yes/no): ").lower()
         if search_again != "yes":
             break  # Exit the search loop if the user doesn't want to search again
-
-
-
-
-def getFriends(curs):
-    # Write the querty to get and print friends
-    print("Function to get friends")
