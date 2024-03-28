@@ -14,6 +14,7 @@ import time
 
 CURR_USER = None
 CURR_USER_ID = None
+CLEAR_COMM = 'clear' # switch to cls if windows
 
 # global variable to track login status
 logged_in = False
@@ -45,15 +46,11 @@ def main_loop(cursor, conn):
         if user_input == 'q':
             break
         elif user_input == 'l':
-            system('clear')
             login(cursor, conn)
         elif user_input == 'r':
-            system('clear')
             createAccount(cursor, conn)
         elif user_input == 'c':
-            system('clear')
             manageCollection(cursor, conn)
-            system('clear')
         elif user_input == 's':
             searchMovie(cursor)
         elif user_input == 'cc':
@@ -64,6 +61,7 @@ def main_loop(cursor, conn):
             unfollow(cursor)
         else:
             print("invalid command.")
+        system(CLEAR_COMM)
 
 
 # Adds movie to collection
@@ -270,7 +268,7 @@ def createAccount(cursor: cursor, conn):
     )
 
     cursor.execute("""
-        INSERT INTO account_creation (userid, creation_date, time_created)
+        INSERT INTO account_creation (userid, date_created, time_created)
         VALUES (%s, %s, %s)
         """,
                    (
