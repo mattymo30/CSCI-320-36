@@ -44,16 +44,13 @@ def main_loop(cursor, conn):
             system('clear')
         elif user_input == 's':
             searchMovie(cursor)
-<<<<<<< HEAD
         elif user_input == 'cc':
             createCollections(cursor, conn)
 
-=======
         elif user_input == 'f':
             follow(cursor, conn)
         elif user_input == 'u':
             unfollow(cursor, conn)
->>>>>>> user-friend
         else:
             cursor.execute("SELECT * FROM genre")
             results = cursor.fetchall()
