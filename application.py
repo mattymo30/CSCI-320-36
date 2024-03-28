@@ -7,6 +7,7 @@ from datetime import date
 import sys
 from os import system
 from tabulate import tabulate
+import time
 
 
 CURR_USER = None
@@ -25,6 +26,8 @@ def main_loop(cursor, conn):
                            "q: exit program\n"
                            "cc: create collection\n"
                            "s: search movies\n"
+                           "w: to watch a movie\n"
+                           "wc: to watch a collection\n"
                            "q: exit program\n")
         if user_input == 'q':
             break
@@ -42,7 +45,12 @@ def main_loop(cursor, conn):
             searchMovie(cursor)
         elif user_input == 'cc':
             createCollections(cursor, conn)
-
+        elif user_input == 'w':
+            system('clear')
+            watch_movie(cursor, conn)
+        elif user_input == 'wc':
+            system('clear')
+            watch_collection(cursor, conn)
         else:
             cursor.execute("SELECT * FROM genre")
             results = cursor.fetchall()
@@ -75,14 +83,23 @@ def rate_movie(curs: cursor):
     pass
 
 
-def watch_movie(curs: cursor):
+def watch_movie(curs: cursor, conn):
     # ask for name
-    pass
+    while 1:
+        system('clear')
+        movieSearch = input("Type the name of the movie you want to watch or press q ")
+        if movieSearch == "q":
+            break
+        else:
+            curs.execute("SELECT movieID, title FROM MOVIE WHERE LOWER(title) LIKE LOWER(%s)", (movieSearch, ))
+            results = curs.fetchall()
+            print(tabulate(results, headers=['Movie Id', 'Movie Title']))
+            movieToPlay = input("Type the id the movie you wish to play ")
+            curs.execute("INSERT INTO watches (userid, movieid, date_watched) VALUES (%s, %s, NOW()::timestamp);", (CURR_USER_ID, movieToPlay))
+            conn.commit()
+            print("Watching Movie")
+            time.sleep(1.5)
 
-
-def watch_collection(curs: cursor):
-    # ask for name
-    pass
 
 
 def follow(curs: cursor):
@@ -223,6 +240,42 @@ def display_menu(menu):
     for k, function in menu.items():
         print(str(k) + ": Collection Name " + str(function[1]) + " | Number of Movies in Collection " + str(function[2]) + " | Total Run time in Hours:minutes " + str(function[3]))
 
+
+def record_collection_watch(collectionID: int, curs: cursor, conn):
+    print(collectionID)
+    curs.execute("SELECT m.movieID, m.title, m.mpaa, m.length FROM CONTAINS c JOIN MOVIE m ON c.movieID = m.movieID WHERE c.collectionID = %s;", (collectionID, ))
+    results = curs.fetchall()
+    print(results)
+    for x in range(len(results)):
+        print(results[x][0])
+        curs.execute("INSERT INTO watches (userid, movieid, date_watched) VALUES (%s, %s, NOW()::timestamp);", (CURR_USER_ID, results[x][0]))
+        conn.commit()
+    print("Watching all movies collection")
+    time.sleep(1.5)
+
+
+def watch_collection(curs: cursor, conn):
+    # ask for name
+    curs.execute("SELECT c.collectionid, c.name AS collection_name, COUNT(cm.movieID) AS num_movies, CONCAT(FLOOR(SUM(m.length) / 3600), ':', CASE WHEN FLOOR((SUM(m.length) %% 3600) / 60) < 10 THEN CONCAT('0', FLOOR((SUM(m.length) %% 3600) / 60)) ELSE CAST(FLOOR((SUM(m.length) %% 3600) / 60) AS VARCHAR) END ) AS total_length FROM COLLECTION c JOIN USER_OWNS_COLLECTION uoc ON c.collectionID = uoc.collectionID LEFT JOIN CONTAINS cm ON c.collectionID = cm.collectionID LEFT JOIN MOVIE m ON cm.movieID = m.movieID WHERE uoc.userID = %s GROUP BY c.collectionID, c.name ORDER BY c.name ASC;", (CURR_USER_ID,))
+    # curs.execute('SELECT c.collectionid, c.name AS collection_name, COUNT(cm.movieID) AS num_movies, CONCAT(FLOOR(SUM(m.length) / 3600), ':', CASE WHEN FLOOR((SUM(m.length) % 3600) / 60) < 10 THEN CONCAT('0', FLOOR((SUM(m.length) % 3600) / 60)) ELSE CAST(FLOOR((SUM(m.length) % 3600) / 60) AS VARCHAR) END ) AS total_length FROM COLLECTION c JOIN USER_OWNS_COLLECTION uoc ON c.collectionID = uoc.collectionID LEFT JOIN CONTAINS cm ON c.collectionID = cm.collectionID LEFT JOIN MOVIE m ON cm.movieID = m.movieID WHERE uoc.userID = %s GROUP BY c.collectionID, c.name ORDER BY c.name ASC;', ((CURR_USER_ID,))
+    print ("Executed the cursor")
+    results = list(curs.fetchall())
+    print(results)
+    menu_items = dict(enumerate(results, start=1))
+    print(menu_items)
+    while True:
+        system("clear")
+        display_menu(menu_items)
+        selection = input("Select a number or press q to return to main menu")
+        if selection == 'q':
+            break
+        elif selection.isnumeric() and int(selection) in menu_items:
+            record_collection_watch(menu_items[int(selection)][0], curs, conn)
+            curs.execute("SELECT c.collectionid, c.name AS collection_name, COUNT(cm.movieID) AS num_movies, CONCAT(FLOOR(SUM(m.length) / 3600), ':', CASE WHEN FLOOR((SUM(m.length) %% 3600) / 60) < 10 THEN CONCAT('0', FLOOR((SUM(m.length) %% 3600) / 60)) ELSE CAST(FLOOR((SUM(m.length) %% 3600) / 60) AS VARCHAR) END ) AS total_length FROM COLLECTION c JOIN USER_OWNS_COLLECTION uoc ON c.collectionID = uoc.collectionID LEFT JOIN CONTAINS cm ON c.collectionID = cm.collectionID LEFT JOIN MOVIE m ON cm.movieID = m.movieID WHERE uoc.userID = %s GROUP BY c.collectionID, c.name ORDER BY c.name ASC;", (CURR_USER_ID,))
+            results = list(curs.fetchall())
+            print(results)
+            menu_items = dict(enumerate(results, start=1))
+            print(menu_items)
 
 def editCollection(collectionID: int, curs: cursor, conn):
     while True:
