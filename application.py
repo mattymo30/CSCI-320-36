@@ -24,8 +24,6 @@ def main_loop(cursor, conn):
         if CURR_USER: # Once logged in
             user_input = input(
                 "Welcome to the movies database!\n"
-                "r: register new user\n"
-                "l: login to database\n"
                 "c: to go to collections\n"
                 "q: exit program\n"
                 "cc: create collection\n"
@@ -43,7 +41,7 @@ def main_loop(cursor, conn):
                 "l: login to database\n"
                 "q: exit program\n"
             )
-            
+
         if user_input == 'q':
             break
         elif user_input == 'l':
