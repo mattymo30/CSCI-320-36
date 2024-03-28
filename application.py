@@ -37,10 +37,12 @@ def main_loop(cursor, conn):
         elif user_input == 'c':
             system('clear')
             manageCollection(cursor, conn)
+            system('clear')
         elif user_input == 's':
             searchMovie(cursor)
         elif user_input == 'cc':
             createCollections(cursor, conn)
+
         else:
             cursor.execute("SELECT * FROM genre")
             results = cursor.fetchall()
@@ -211,12 +213,15 @@ def createCollections(cursor:cursor, conn):
     max_id = cursor.fetchone()[0] + 1
     cursor.execute("INSERT INTO collection (collectionid, name) VALUES (%s, %s)", (max_id, collectionname))
     conn.commit()
+    cursor.execute("INSERT INTO user_owns_collection (collectionID, userID) VALUES (%s, %s)", (max_id, CURR_USER_ID))
+    conn.commit()
 
     print('Collection created.')
 
 def display_menu(menu):
+    print("In this function")
     for k, function in menu.items():
-        print(str(k) + ": Collection Name " + str(function[1]) + " | Number of Movies in Collection " + str(function[2]) + " | Total Run time in Minutes:seconds " + str(function[3]))
+        print(str(k) + ": Collection Name " + str(function[1]) + " | Number of Movies in Collection " + str(function[2]) + " | Total Run time in Hours:minutes " + str(function[3]))
 
 
 def editCollection(collectionID: int, curs: cursor, conn):
@@ -226,7 +231,6 @@ def editCollection(collectionID: int, curs: cursor, conn):
         results = curs.fetchall()
         # printing out all the movies in the collection
         print(tabulate(results, headers=['Movie id', 'Movie Name', 'Movie Rating', 'Movie Runtime in seconds']))
-        print(collectionID)
         selection = input('Type DW to Delete whole collection, Type CN to change collection name, Type D to delete a movie from collection, Type A to add a movie to the collection, q to exit')
         if selection == 'q':
             break
@@ -245,27 +249,33 @@ def editCollection(collectionID: int, curs: cursor, conn):
             print(tabulate(results, headers=['Movie Id', 'Movie Title']))
             movieIdToAdd = input ("Type the id of the movie you want to add")
             curs.execute("INSERT INTO CONTAINS (collectionID, movieID) VALUES (%s, %s)", ((collectionID, movieIdToAdd)))
-            # TO DO: Actuall add it to the contains table
             conn.commit()
+        elif selection == "DW":
+            curs.execute("DELETE FROM CONTAINS WHERE collectionID = %s", (collectionID, ))
+            curs.execute("DELETE FROM USER_OWNS_COLLECTION WHERE collectionID = %s", (collectionID, ))
+            curs.execute("DELETE FROM COLLECTION WHERE collectionID = %s",(collectionID, ))
+            conn.commit()
+
     
 
 def manageCollection(curs: cursor, conn):
-    system('clear')
-    curs.execute("SELECT c.collectionID, c.name AS collection_name, COUNT(cm.movieID) AS num_movies, TO_CHAR(INTERVAL '1 minute' * SUM(m.length), 'HH24:MI') AS total_length FROM COLLECTION c JOIN USER_OWNS_COLLECTION uoc ON c.collectionID = uoc.collectionID JOIN CONTAINS cm ON c.collectionID = cm.collectionID JOIN MOVIE m ON cm.movieID = m.movieID WHERE uoc.userID = %s GROUP BY c.collectionID, c.name ORDER BY c.name ASC, num_movies, total_length;", (CURR_USER_ID,))
+    print("IN this statement")
+    curs.execute("SELECT c.collectionid, c.name AS collection_name, COUNT(cm.movieID) AS num_movies, CONCAT(FLOOR(SUM(m.length) / 3600), ':', CASE WHEN FLOOR((SUM(m.length) %% 3600) / 60) < 10 THEN CONCAT('0', FLOOR((SUM(m.length) %% 3600) / 60)) ELSE CAST(FLOOR((SUM(m.length) %% 3600) / 60) AS VARCHAR) END ) AS total_length FROM COLLECTION c JOIN USER_OWNS_COLLECTION uoc ON c.collectionID = uoc.collectionID LEFT JOIN CONTAINS cm ON c.collectionID = cm.collectionID LEFT JOIN MOVIE m ON cm.movieID = m.movieID WHERE uoc.userID = %s GROUP BY c.collectionID, c.name ORDER BY c.name ASC;", (CURR_USER_ID,))
+    # curs.execute('SELECT c.collectionid, c.name AS collection_name, COUNT(cm.movieID) AS num_movies, CONCAT(FLOOR(SUM(m.length) / 3600), ':', CASE WHEN FLOOR((SUM(m.length) % 3600) / 60) < 10 THEN CONCAT('0', FLOOR((SUM(m.length) % 3600) / 60)) ELSE CAST(FLOOR((SUM(m.length) % 3600) / 60) AS VARCHAR) END ) AS total_length FROM COLLECTION c JOIN USER_OWNS_COLLECTION uoc ON c.collectionID = uoc.collectionID LEFT JOIN CONTAINS cm ON c.collectionID = cm.collectionID LEFT JOIN MOVIE m ON cm.movieID = m.movieID WHERE uoc.userID = %s GROUP BY c.collectionID, c.name ORDER BY c.name ASC;', ((CURR_USER_ID,))
+    print ("Executed the cursor")
     results = list(curs.fetchall())
     print(results)
     menu_items = dict(enumerate(results, start=1))
     print(menu_items)
     while True:
+        system("clear")
         display_menu(menu_items)
         selection = input("Select a number or press q to return to main menu")
         if selection == 'q':
-            system('clear')
             break
         elif selection.isnumeric() and int(selection) in menu_items:
             editCollection(menu_items[int(selection)][0], curs, conn)
-            system('clear')
-            curs.execute("SELECT c.collectionID, c.name AS collection_name, COUNT(cm.movieID) AS num_movies, TO_CHAR(INTERVAL '1 minute' * SUM(m.length), 'HH24:MI') AS total_length FROM COLLECTION c JOIN USER_OWNS_COLLECTION uoc ON c.collectionID = uoc.collectionID JOIN CONTAINS cm ON c.collectionID = cm.collectionID JOIN MOVIE m ON cm.movieID = m.movieID WHERE uoc.userID = %s GROUP BY c.collectionID, c.name ORDER BY c.name ASC, num_movies, total_length;", (CURR_USER_ID,))
+            curs.execute("SELECT c.collectionid, c.name AS collection_name, COUNT(cm.movieID) AS num_movies, CONCAT(FLOOR(SUM(m.length) / 3600), ':', CASE WHEN FLOOR((SUM(m.length) %% 3600) / 60) < 10 THEN CONCAT('0', FLOOR((SUM(m.length) %% 3600) / 60)) ELSE CAST(FLOOR((SUM(m.length) %% 3600) / 60) AS VARCHAR) END ) AS total_length FROM COLLECTION c JOIN USER_OWNS_COLLECTION uoc ON c.collectionID = uoc.collectionID LEFT JOIN CONTAINS cm ON c.collectionID = cm.collectionID LEFT JOIN MOVIE m ON cm.movieID = m.movieID WHERE uoc.userID = %s GROUP BY c.collectionID, c.name ORDER BY c.name ASC;", (CURR_USER_ID,))
             results = list(curs.fetchall())
             print(results)
             menu_items = dict(enumerate(results, start=1))
