@@ -108,6 +108,7 @@ def watch_movie(curs: cursor, conn):
 
 
 """-------------------Friends---------------------"""
+
 def search_users(curs:cursor, email:str):
     # Gets potential friend info
     curs.execute("select username,userid from person where email = (%s);",(email,))
@@ -131,7 +132,6 @@ def search_users(curs:cursor, email:str):
 
 def follow(curs:cursor, conn):
     email = ""
-    userid = 4179 # TODO Update this when login is fixed
 
     while(True):
         # Prompt user for email
@@ -153,13 +153,12 @@ def follow(curs:cursor, conn):
             INSERT INTO friendrelation (relationshipid, userid, friendid)
             VALUES (%s, %s, %s)
             """,
-            (relationshipid,userid,friendid)
+            (relationshipid,CURR_USER_ID,friendid)
         )
         conn.commit()
         print("Friend added!")
 
 def getFriends(curs:cursor):
-    userid = 4179 # TODO Update this when login is fixed
     curs.execute(
         """
         select p.username, f.relationshipid
@@ -167,7 +166,7 @@ def getFriends(curs:cursor):
         inner join friendrelation f
         on p.userid = f.friendid and f.userid = %s;
         """,
-        (userid,)
+        (CURR_USER_ID,)
     )
     # list of (username, relationshipid) tuples
     freinds = curs.fetchall()
@@ -177,7 +176,7 @@ def getFriends(curs:cursor):
         print(f"{i+1}. {freinds[i][0]}")
     return freinds
 
-def unfollow(curs:cursor, conn):
+def unfollow(curs:cursor):
     while(True):
         # Display friends of user
         all_friends:dict = getFriends(curs)
