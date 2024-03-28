@@ -585,10 +585,3 @@ def searchMovie(curs):
         search_again = input("Do you want to search again? (yes/no): ").lower()
         if search_again != "yes":
             break  # Exit the search loop if the user doesn't want to search again
-
-
-
-
-def getFriends(curs):
-    # Write the querty to get and print friends
-    print("Function to get friends")
