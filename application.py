@@ -41,6 +41,7 @@ def main_loop(cursor, conn):
                 "l: login to database\n"
                 "q: exit program\n"
             )
+        system(CLEAR_COMM)
 
         if user_input == 'q':
             break
@@ -60,7 +61,6 @@ def main_loop(cursor, conn):
             unfollow(cursor, conn)
         else:
             print("invalid command.")
-        system(CLEAR_COMM)
 
 
 # Adds movie to collection
@@ -92,7 +92,7 @@ def rate_movie(curs: cursor):
 def watch_movie(curs: cursor, conn):
     # ask for name
     while 1:
-        system('clear')
+        system(CLEAR_COMM)
         movieSearch = input("Type the name of the movie you want to watch or press q ")
         if movieSearch == "q":
             break
@@ -376,11 +376,10 @@ def watch_collection(curs: cursor, conn):
     # curs.execute('SELECT c.collectionid, c.name AS collection_name, COUNT(cm.movieID) AS num_movies, CONCAT(FLOOR(SUM(m.length) / 3600), ':', CASE WHEN FLOOR((SUM(m.length) % 3600) / 60) < 10 THEN CONCAT('0', FLOOR((SUM(m.length) % 3600) / 60)) ELSE CAST(FLOOR((SUM(m.length) % 3600) / 60) AS VARCHAR) END ) AS total_length FROM COLLECTION c JOIN USER_OWNS_COLLECTION uoc ON c.collectionID = uoc.collectionID LEFT JOIN CONTAINS cm ON c.collectionID = cm.collectionID LEFT JOIN MOVIE m ON cm.movieID = m.movieID WHERE uoc.userID = %s GROUP BY c.collectionID, c.name ORDER BY c.name ASC;', ((CURR_USER_ID,))
     print ("Executed the cursor")
     results = list(curs.fetchall())
-    print(results)
     menu_items = dict(enumerate(results, start=1))
     print(menu_items)
     while True:
-        system("clear")
+        system(CLEAR_COMM)
         display_menu(menu_items)
         selection = input("Select a number or press q to return to main menu")
         if selection == 'q':
@@ -395,7 +394,7 @@ def watch_collection(curs: cursor, conn):
 
 def editCollection(collectionID: int, curs: cursor, conn):
     while True:
-        system('clear')
+        system(CLEAR_COMM)
         curs.execute(
             "SELECT m.movieID, m.title, m.mpaa, m.length FROM CONTAINS c JOIN MOVIE m ON c.movieID = m.movieID WHERE c.collectionID = %s;",
             (collectionID,))
@@ -441,7 +440,7 @@ def manageCollection(curs: cursor, conn):
     menu_items = dict(enumerate(results, start=1))
     print(menu_items)
     while True:
-        system("clear")
+        system(CLEAR_COMM)
         display_menu(menu_items)
         selection = input("Select a number or press q to return to main menu")
         if selection == 'q':
