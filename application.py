@@ -59,6 +59,10 @@ def main_loop(cursor, conn):
             follow(cursor, conn)
         elif user_input == 'u':
             unfollow(cursor, conn)
+        elif user_input == 'w':
+            watch_movie(cursor, conn)
+        elif user_input == 'wc':
+            watch_collection(cursor, conn)
         else:
             print("invalid command.")
 
