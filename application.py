@@ -103,7 +103,6 @@ def rate_movie(curs: cursor, conn):
     movieToRate = input("Type the name of the movie you want to rate: ")
     curs.execute("SELECT movieID FROM MOVIE where LOWER(title) LIKE LOWER(%s)", (movieToRate,))
     results = curs.fetchall()
-    print(results)
     movie_id = results[0]
     while True:
         rating = input("Rate %s from 1-5 stars: ")
