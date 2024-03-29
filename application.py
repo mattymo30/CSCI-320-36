@@ -26,7 +26,6 @@ def main_loop(cursor, conn):
             user_input = input(
                 "Welcome to the movies database!\n"
                 "c: to go to collections\n"
-                "q: exit program\n"
                 "cc: create collection\n"
                 "s: search movies\n"
                 "w: to watch a movie\n"
@@ -58,7 +57,7 @@ def main_loop(cursor, conn):
         elif user_input == 'f':
             follow(cursor, conn)
         elif user_input == 'u':
-            unfollow(cursor)
+            unfollow(cursor, conn)
         else:
             print("invalid command.")
         system(CLEAR_COMM)
@@ -177,7 +176,7 @@ def getFriends(curs:cursor):
         print(f"{i+1}. {freinds[i][0]}")
     return freinds
 
-def unfollow(curs:cursor):
+def unfollow(curs:cursor, conn):
     while(True):
         # Display friends of user
         all_friends:dict = getFriends(curs)
@@ -195,8 +194,9 @@ def unfollow(curs:cursor):
                     (friend[1],)
                 )
                 print(f"Successfully unfollowed {username}")
-            else:
-                print("Invalid username entered.")
+                conn.commit()
+                return
+        print("Invalid username entered.")
 
 """----------------Authentication------------------"""
 
