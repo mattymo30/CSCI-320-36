@@ -72,9 +72,37 @@ def delete_collection(curse: cursor):
     pass
 
 
-def rate_movie(curs: cursor):
-    # ask for rating out of 5
-    pass
+def rate_movie(curs: cursor, conn):
+    """
+    Ask the user to find a movie and rate it from a scale of 1-5
+    :param conn: connection to database
+    :param curs: cursor to connect to the database and tables
+    """
+    if CURR_USER is None:
+        print("You aren't logged in!")
+        return
+    movieToRate = input("Type the name of the movie you want to rate: ")
+    curs.execute("SELECT movieID FROM MOVIE where LOWER(title) LIKE LOWER(%s)", (movieToRate,))
+    results = curs.fetchall()
+    print(results)
+    movie_id = results[0]
+    while True:
+        rating = input("Rate %s from 1-5 stars: ")
+        rating = int(rating)
+        if rating < 1 or rating > 5:
+            print("Rating must be between 1-5!")
+        else:
+            curs.execute("""INSERT INTO rates(userid, movieid, userrating)
+            VALUES (%s, %s, %s)
+            """,
+                         (
+                             CURR_USER_ID,
+                             movie_id,
+                             rating
+                         )
+                         )
+            conn.commit()
+            break
 
 
 def watch_movie(curs: cursor):
