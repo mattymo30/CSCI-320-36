@@ -14,7 +14,7 @@ import time
 
 CURR_USER = None
 CURR_USER_ID = None
-CLEAR_COMM = 'cls' # switch to cls if windows
+CLEAR_COMM = 'clear' # switch to cls if windows
 
 # global variable to track login status
 logged_in = False
@@ -105,8 +105,7 @@ def rate_movie(curs: cursor, conn):
     results = curs.fetchall()
     movie_id = results[0]
     while True:
-        rating = input("Rate %s from 1-5 stars: ")
-        rating = int(rating)
+        rating = int(input("Rate the movie from 1-5 stars: "))
         if rating < 1 or rating > 5:
             print("Rating must be between 1-5!")
         else:
@@ -179,7 +178,7 @@ def follow(curs:cursor, conn):
             break
 
         curs.execute("select count(*) from friendrelation")
-        relationshipid = curs.fetchall()[0][0] + 1 # total relationships
+        relationshipid = curs.fetchall()[0][0] + 2 # total relationships
 
         # Make them friends
         curs.execute(
