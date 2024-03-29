@@ -572,6 +572,7 @@ def searchMovie(curs):
                 print()  # Print an additional line after the loop
             else:
                 print("No matching movies found.")
+                break
 
             # Ask the user if they want to sort again
             sort_again = input("Do you want to sort the results again? (yes/no): ").lower()
