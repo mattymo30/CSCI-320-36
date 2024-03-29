@@ -24,7 +24,7 @@ def main_loop(cursor, conn):
                            "r: register new user\n"
                            "l: login to database\n"
                            "c: to go to collections\n"
-                           "q: exit program\n"
+                           "rate: rate a movie\n"
                            "cc: create collection\n"
                            "s: search movies\n"
                            "q: exit program\n")
@@ -42,6 +42,8 @@ def main_loop(cursor, conn):
             system('clear')
         elif user_input == 's':
             searchMovie(cursor)
+        elif user_input == "rate":
+            rate_movie(cursor, conn)
         elif user_input == 'cc':
             createCollections(cursor, conn)
 
