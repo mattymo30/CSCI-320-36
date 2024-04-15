@@ -33,6 +33,7 @@ def main_loop(cursor, conn):
                 "wc: to watch a collection\n"
                 "f: follow another user\n"
                 "u: unfollow a user\n"
+                "t: get top 10 movies\n"
                 "q: exit program\n"
                 )
         else: # if not logged in
@@ -66,6 +67,8 @@ def main_loop(cursor, conn):
             watch_movie(cursor, conn)
         elif user_input == 'wc':
             watch_collection(cursor, conn)
+        elif user_input == 't':
+            get_top_10(cursor)
         else:
             print("invalid command.")
 
@@ -616,3 +619,62 @@ def searchMovie(curs):
         search_again = input("Do you want to search again? (yes/no): ").lower()
         if search_again != "yes":
             break  # Exit the search loop if the user doesn't want to search again
+
+
+def get_top_10(curs):
+    """
+    Get a user's top 10 movies based on highest rating, most plays. or a
+    combination of both
+    :param curs: cursor to connect to the database and tables
+    """
+    # Get search parameters from the user
+    while True:
+        top_10_option = input("Get Top 10 From (ratings, plays, both): ").lower()
+        if top_10_option in ['ratings','plays','both']:
+            break
+        print("Invalid Choice!")
+    sql_query = ""
+    # user wants top 10 by ratings
+    if top_10_option == 'ratings':
+        sql_query = """
+            SELECT m.title, AVG(r.rating) AS avg_rating
+            FROM rates r
+            JOIN movies m ON r.movie_id = m.movie_id
+            WHERE r.user_id = %s
+            GROUP BY m.title
+            ORDER BY avg_rating DESC
+            LIMIT 10;
+        """, (CURR_USER_ID,)
+    elif top_10_option == 'plays':
+        sql_query = """
+            SELECT m.title, COUNT(*) AS play_count
+            FROM watches w
+            JOIN movies m ON w.movie_id = m.movie_id
+            WHERE w.user_id = %s
+            GROUP BY m.title
+            ORDER BY play_count DESC
+            LIMIT 10;
+        """, (CURR_USER_ID,)
+    else:
+        sql_query = """
+            SELECT m.title, AVG(r.rating) * COUNT(w.movie_id) AS score
+            FROM rates r, watches w
+            JOIN watches w ON r.movie_id = w.movie_id
+            JOIN movies m ON r.movie_id = m.movie_id
+            WHERE r.user_id = %s
+            GROUP BY m.title
+            ORDER BY score DESC
+            LIMIT 10;
+        """, (CURR_USER_ID,)
+
+    curs.execute(sql_query)
+    results = curs.fetchall()
+
+    # Print the results
+    if results:
+        print("Top 10 Movie Results based on %s", top_10_option)
+        for row in results:
+            print(row)
+    else:
+        print("No movies found! You need to rate or watch more movies!")
+
