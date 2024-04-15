@@ -616,3 +616,31 @@ def searchMovie(curs):
         search_again = input("Do you want to search again? (yes/no): ").lower()
         if search_again != "yes":
             break  # Exit the search loop if the user doesn't want to search again
+
+
+def get_user_stats(curs):
+    collection_query = """
+            SELECT COUNT(*) FROM user_owns_collection
+            WHERE userid = %s;
+    """, (CURR_USER_ID,)
+    followed_query = """
+            SELECT COUNT(*) FROM friendrelation
+            WHERE userid = %s;
+    """, (CURR_USER_ID,)
+    following_query = """
+            SELECT COUNT(*) FROM friendrelation
+            WHERE friendid = %s;
+    """, (CURR_USER_ID,)
+
+    curs.execute(collection_query)
+    coll_res = curs.fetchone()[0]
+
+    curs.execute(followed_query)
+    followed_res = curs.fetchone()[0]
+
+    curs.execute(following_query)
+    following_res = curs.fetchone()[0]
+
+    print("Number of collections owned by ", CURR_USER, ": ", coll_res)
+    print("Number of users followed by ", CURR_USER, ": ", followed_res)
+    print("Number of users following ", CURR_USER, ": ", following_res)
