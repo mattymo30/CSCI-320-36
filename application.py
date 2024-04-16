@@ -14,7 +14,7 @@ import time
 
 CURR_USER = None
 CURR_USER_ID = None
-CLEAR_COMM = 'clear' # switch to cls if windows
+CLEAR_COMM = 'cls' # switch to cls if windows
 
 # global variable to track login status
 logged_in = False
@@ -228,12 +228,61 @@ def unfollow(curs:cursor, conn):
                 return
         print("Invalid username entered.")
 
-def user_top_ten(curs:cursor):
-    print("\nHighest Rated")
-    print("\nMost Plays")
-    print("\nBoth")
-    # Their top 10 movies (Highest rating, most plays, combination)
-    pass
+def get_top_10(curs):
+    """
+    Get a user's top 10 movies based on highest rating, most plays. or a
+    combination of both
+    :param curs: cursor to connect to the database and tables
+    """
+    # Get search parameters from the user
+    while True:
+        top_10_option = input("Get Top 10 From (ratings, plays, both): ").lower()
+        if top_10_option in ['ratings','plays','both']:
+            break
+        print("Invalid Choice!")
+    sql_query = ""
+    # user wants top 10 by ratings
+    if top_10_option == 'ratings':
+        curs.execute("""
+            SELECT m.title, AVG(r.rating) AS avg_rating
+            FROM rates r
+            JOIN movie m ON r.movie_id = m.movie_id
+            WHERE r.user_id = (%s)
+            GROUP BY m.title
+            ORDER BY avg_rating DESC
+            LIMIT 10;
+        """, (CURR_USER_ID,))
+    elif top_10_option == 'plays':
+        curs.execute("""
+            SELECT m.title, COUNT(*) AS play_count
+            FROM watches w
+            JOIN movie m ON w.movie_id = m.movie_id
+            WHERE w.user_id = (%s)
+            GROUP BY m.title
+            ORDER BY play_count DESC
+            LIMIT 10;
+        """, (CURR_USER_ID,))
+    else:
+        curs.execute("""
+            SELECT m.title, AVG(r.rating) * COUNT(w.movie_id) AS score
+            FROM rates r, watches w
+            JOIN watches w ON r.movie_id = w.movie_id
+            JOIN movie m ON r.movie_id = m.movie_id
+            WHERE r.user_id = (%s)
+            GROUP BY m.title
+            ORDER BY score DESC
+            LIMIT 10;
+        """, (CURR_USER_ID,))
+
+    results = curs.fetchall()
+
+    # Print the results
+    if results:
+        print("Top 10 Movie Results based on %s", top_10_option)
+        for row in results:
+            print(row)
+    else:
+        print("No movies found! You need to rate or watch more movies!")
 
 def user_profile(curs:cursor, conn):
     curs.execute( # Display number of following
@@ -266,7 +315,7 @@ def user_profile(curs:cursor, conn):
         mode = input(
             "f: follow another user\n"
             "u: unfollow a user\n"
-            "tt: Top ten"
+            "tt: Top ten\n\n"
         )
 
         if mode == 'f':
@@ -274,7 +323,7 @@ def user_profile(curs:cursor, conn):
         elif mode == 'u':
             unfollow(curs, conn)
         elif mode == 'tt':
-            user_top_ten(curs)
+            get_top_10(curs)
         elif mode == "q":
             return
 
