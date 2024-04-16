@@ -31,8 +31,7 @@ def main_loop(cursor, conn):
                 "rate: rate movie\n"
                 "w: to watch a movie\n"
                 "wc: to watch a collection\n"
-                "f: follow another user\n"
-                "u: unfollow a user\n"
+                "u: Show user profile\n"
                 "q: exit program\n"
                 )
         else: # if not logged in
@@ -58,10 +57,8 @@ def main_loop(cursor, conn):
             searchMovie(cursor)
         elif user_input == 'cc':
             createCollections(cursor, conn)
-        elif user_input == 'f':
-            follow(cursor, conn)
         elif user_input == 'u':
-            unfollow(cursor, conn)
+            user_profile(cursor, conn)
         elif user_input == 'w':
             watch_movie(cursor, conn)
         elif user_input == 'wc':
@@ -231,6 +228,56 @@ def unfollow(curs:cursor, conn):
                 conn.commit()
                 return
         print("Invalid username entered.")
+
+def user_top_ten(curs:cursor):
+    print("\nHighest Rated")
+    print("\nMost Plays")
+    print("\nBoth")
+    # Their top 10 movies (Highest rating, most plays, combination)
+    pass
+
+def user_profile(curs:cursor, conn):
+    curs.execute( # Display number of following
+        """
+        select count(*) from friendrelation where userid = 10001;
+        """,
+        (CURR_USER_ID,)
+    )
+    following = curs.fetchall()[0][0]
+
+    curs.execute( # Display the number of followers
+        """
+        select count(*) from friendrelation where friendid = 10001;
+        """,
+        (CURR_USER_ID,)
+    )
+    followers = curs.fetchall()[0][0]
+
+    curs.execute( # Display number of collections the user has
+        """
+        select count(*) from user_owns_collection where userid = (%s);
+        """,
+        (CURR_USER_ID,)
+    )
+    coll_tot = curs.fetchall()[0][0]
+
+    print(f"User: {CURR_USER}\n Collections: {coll_tot}\t Followers: {followers}\t Following: {following}\n")
+
+    while(True):
+        mode = input(
+            "f: follow another user\n"
+            "u: unfollow a user\n"
+            "tt: Top ten"
+        )
+
+        if mode == 'f':
+            follow(curs, conn)
+        elif mode == 'u':
+            unfollow(curs, conn)
+        elif mode == 'tt':
+            user_top_ten(curs)
+        elif mode == "q":
+            return
 
 """----------------Authentication------------------"""
 
