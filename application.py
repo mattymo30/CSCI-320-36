@@ -14,7 +14,7 @@ import time
 
 CURR_USER = None
 CURR_USER_ID = None
-CLEAR_COMM = 'cls' # switch to cls if windows
+CLEAR_COMM = 'clear' # switch to cls if windows
 
 # global variable to track login status
 logged_in = False
@@ -240,14 +240,13 @@ def get_top_10(curs):
         if top_10_option in ['ratings','plays','both']:
             break
         print("Invalid Choice!")
-    sql_query = ""
     # user wants top 10 by ratings
     if top_10_option == 'ratings':
         curs.execute("""
-            SELECT m.title, AVG(r.rating) AS avg_rating
+            SELECT m.title, AVG(r.userrating) AS avg_rating
             FROM rates r
-            JOIN movie m ON r.movie_id = m.movie_id
-            WHERE r.user_id = (%s)
+            JOIN movie m ON r.movieid = m.movieid
+            WHERE r.userid = (%s)
             GROUP BY m.title
             ORDER BY avg_rating DESC
             LIMIT 10;
@@ -256,19 +255,19 @@ def get_top_10(curs):
         curs.execute("""
             SELECT m.title, COUNT(*) AS play_count
             FROM watches w
-            JOIN movie m ON w.movie_id = m.movie_id
-            WHERE w.user_id = (%s)
+            JOIN movie m ON w.movieid = m.movieid
+            WHERE w.userid = (%s)
             GROUP BY m.title
             ORDER BY play_count DESC
             LIMIT 10;
         """, (CURR_USER_ID,))
     else:
         curs.execute("""
-            SELECT m.title, AVG(r.rating) * COUNT(w.movie_id) AS score
-            FROM rates r, watches w
-            JOIN watches w ON r.movie_id = w.movie_id
-            JOIN movie m ON r.movie_id = m.movie_id
-            WHERE r.user_id = (%s)
+            SELECT m.title, AVG(r.userrating) * COUNT(w.movieid) AS score
+            FROM rates AS r
+            JOIN watches AS w ON r.movieid = w.movieid
+            JOIN movie AS m ON r.movieid = m.movieid
+            WHERE r.userid = (%s)
             GROUP BY m.title
             ORDER BY score DESC
             LIMIT 10;
@@ -278,9 +277,9 @@ def get_top_10(curs):
 
     # Print the results
     if results:
-        print("Top 10 Movie Results based on %s", top_10_option)
+        print(f"Top 10 Movie Results based on {top_10_option}")
         for row in results:
-            print(row)
+            print(f"\t{row[0]}: {round(row[1], 1)}")
     else:
         print("No movies found! You need to rate or watch more movies!")
 
@@ -313,7 +312,7 @@ def user_profile(curs:cursor, conn):
 
     while(True):
         mode = input(
-            "f: follow another user\n"
+            "\n\nf: follow another user\n"
             "u: unfollow a user\n"
             "tt: Top ten\n\n"
         )
