@@ -32,6 +32,7 @@ def main_loop(cursor, conn):
                 "w: to watch a movie\n"
                 "wc: to watch a collection\n"
                 "u: Show user profile\n"
+                "ss: Show hottest movies in town\n"
                 "q: exit program\n"
                 )
         else: # if not logged in
@@ -63,29 +64,77 @@ def main_loop(cursor, conn):
             watch_movie(cursor, conn)
         elif user_input == 'wc':
             watch_collection(cursor, conn)
+        elif user_input == 'ss':
+            statstics(cursor, conn)
         else:
             print("invalid command.")
 
 
-# Adds movie to collection
-def add_movie(curs: cursor):
-    pass
 
+def statstics(curs: cursor, conn):
+    while 1:
+        user_input = input("Type Any of the opitions\n"
+                           "TM: Top movies in the past 90 Days\n"
+                           "TF: Top movies among my followers\n"
+                           "TR: Top 5 new releases of the month\n"
+                           "R:  Recommended Movies for you\n")
 
-# Deletes movie from collection
-def delete_movie(curs: cursor):
-    # Ask for name
-    pass
-
-
-def update_col_name(curs: cursor):
-    # Ask for old name and and new name
-    pass
-
-
-def delete_collection(curse: cursor):
-    # ask for name
-    pass
+        if user_input == "TM":
+            curs.execute("SELECT m.movieID, m.title FROM WATCHES w JOIN MOVIE m ON w.movieID = m.movieID WHERE w.date_watched >= CURRENT_DATE - INTERVAL '90 days' GROUP BY m.movieID, m.title ORDER BY COUNT(w.movieID) DESC LIMIT 20;")
+            results = curs.fetchall()
+            print(tabulate(results, headers=['Movie Id', 'Movie Title']))
+        elif user_input == "TF":
+            curs.execute("SELECT m.movieID, m.title FROM friendrelation fr JOIN person u ON fr.friendID = u.userID JOIN WATCHES w ON u.userID = w.userID JOIN MOVIE m ON w.movieID = m.movieID WHERE fr.userID = %s GROUP BY m.movieID, m.title ORDER BY COUNT(w.movieid) DESC LIMIT 20;", (CURR_USER_ID, ))
+            results = curs.fetchall()
+            print(tabulate(results, headers=['Movie Id', 'Movie Title']))
+        elif user_input == "TR":
+            curs.execute("""SELECT m.movieID, m.title, ROUND(AVG(r.userRating), 2) AS avg_rating
+                            FROM MOVIE m
+                            JOIN RATES r ON m.movieID = r.movieID
+                            JOIN RELEASED rd ON m.movieID = rd.movieID
+                            WHERE EXTRACT(YEAR FROM rd.releaseDate) = EXTRACT(YEAR FROM CURRENT_DATE)
+                            AND EXTRACT(MONTH FROM rd.releaseDate) = EXTRACT(MONTH FROM CURRENT_DATE)
+                            GROUP BY m.movieID, m.title
+                            ORDER BY avg_rating DESC
+                            LIMIT 5;""")
+            results = curs.fetchall()
+            print(tabulate(results, headers=['Movie Id', 'Movie Title', 'Movie Rating']))
+        elif user_input == "R":
+            curs.execute("""WITH your_top_genres AS (
+                            SELECT g.genreID, g.type, COUNT(*) AS genre_count
+                            FROM person u
+                            JOIN WATCHES w ON u.userID = w.userID
+                            JOIN MOVIE m ON w.movieID = m.movieID
+                            JOIN CATEGORIZE c ON m.movieID = c.movieID
+                            JOIN GENRE g ON c.genreID = g.genreID
+                            WHERE u.userid = %s
+                            GROUP BY g.genreID, g.type
+                            ORDER BY genre_count DESC
+                            LIMIT 3
+                        ),
+                        friend_rated_movies AS (
+                            SELECT w.movieID
+                            FROM friendrelation fr
+                            JOIN WATCHES w ON fr.friendID = w.userID
+                            JOIN MOVIE m ON w.movieID = m.movieID
+                            JOIN CATEGORIZE c ON m.movieID = c.movieID
+                            JOIN your_top_genres yg ON c.genreID = yg.genreID
+                            WHERE fr.userID = %s
+                        )
+                            SELECT m.movieID, m.title
+                            FROM MOVIE m
+                            JOIN CATEGORIZE c ON m.movieID = c.movieID
+                            JOIN your_top_genres yg ON c.genreID = yg.genreID
+                        WHERE m.movieID IN (
+                            SELECT movieID FROM friend_rated_movies
+                        )
+                        GROUP BY m.movieID, m.title
+                        ORDER BY COUNT(*) DESC
+                    LIMIT 10;""", (CURR_USER_ID, CURR_USER_ID, ))
+            results = curs.fetchall()
+            print(tabulate(results, headers=['Movie Id', 'Movie Title']))
+        elif user_input == "q":
+            break
 
 
 def rate_movie(curs: cursor, conn):
