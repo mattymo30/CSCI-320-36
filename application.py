@@ -335,7 +335,7 @@ def get_top_10(curs):
 def user_profile(curs:cursor, conn):
     curs.execute( # Display number of following
         """
-        select count(*) from friendrelation where userid = 10001;
+        select count(*) from friendrelation where userid = (%s);
         """,
         (CURR_USER_ID,)
     )
@@ -343,7 +343,7 @@ def user_profile(curs:cursor, conn):
 
     curs.execute( # Display the number of followers
         """
-        select count(*) from friendrelation where friendid = 10001;
+        select count(*) from friendrelation where friendid = (%s);
         """,
         (CURR_USER_ID,)
     )
